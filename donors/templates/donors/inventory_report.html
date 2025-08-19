@@ -1,0 +1,221 @@
+{% extends 'donors/base.html' %}
+{% block content %}
+
+<style>
+    .inventory-card {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .blood-type-badge {
+        font-size: 1rem;
+        padding: 8px 12px;
+        border-radius: 20px;
+    }
+    .progress {
+        height: 25px;
+        border-radius: 12px;
+    }
+    .progress-bar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+    .critical-low {
+        background-color: #dc3545;
+    }
+    .low {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    .adequate {
+        background-color: #28a745;
+    }
+    .summary-card {
+        border-left: 5px solid #dc3545;
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card inventory-card">
+                <div class="card-header bg-danger text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3><i class="fas fa-tint me-2"></i>Blood Bank Inventory Report</h3>
+                        <span class="badge bg-light text-dark">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            {{ today|date:"d/m/Y" }}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Inventory Table -->
+                        <div class="col-md-8">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Blood Type</th>
+                                            <th>Units Available</th>
+                                            <th>Stock Level</th>
+                                            <th>% of Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for blood_type, data in inventory.items %}
+                                        <tr>
+                                            <td>
+                                                <span class="badge blood-type-badge bg-danger">
+                                                    {{ blood_type }}
+                                                </span>
+                                            </td>
+                                            <td class="fw-bold">{{ data.units|default:0 }}</td>
+                                            <td>
+                                                {% if data.units < 5 %}
+                                                    <span class="badge critical-low">Critical</span>
+                                                {% elif data.units < 10 %}
+                                                    <span class="badge low">Low</span>
+                                                {% else %}
+                                                    <span class="badge adequate">Adequate</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="progress">
+                                                    <div class="progress-bar bg-danger" 
+                                                         role="progressbar" 
+                                                         style="width: {{ data.percentage }}%" 
+                                                         aria-valuenow="{{ data.percentage }}" 
+                                                         aria-valuemin="0" 
+                                                         aria-valuemax="100">
+                                                        {{ data.percentage|floatformat:1 }}%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Summary Cards -->
+                        <div class="col-md-4">
+                            <div class="card summary-card mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fas fa-weight me-2"></i>Total Blood Units
+                                    </h5>
+                                    <div class="display-4 text-danger">{{ total_volume|default:0 }}</div>
+                                    <p class="text-muted mb-0">ml available in bank</p>
+                                </div>
+                            </div>
+                            
+                            <div class="card summary-card mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fas fa-check-circle me-2"></i>Requests Fulfilled
+                                    </h5>
+                                    <div class="display-4 text-danger">{{ total_requests }}</div>
+                                    <p class="text-muted mb-0">successful transfusions</p>
+                                </div>
+                            </div>
+                            
+                            <div class="card summary-card">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>Critical Stock
+                                    </h5>
+                                    <ul class="list-group list-group-flush">
+                                        {% for blood_type, data in inventory.items %}
+                                            {% if data.units < 5 %}
+                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                {{ blood_type }}
+                                                <span class="badge critical-low">{{ data.units }} units</span>
+                                            </li>
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% if not critical_stock %}
+                                            <li class="list-group-item text-success">
+                                                No critical stock levels
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-footer text-muted">
+                    <small>
+                        <i class="fas fa-info-circle me-1"></i>
+                        Last updated: {% now "DATETIME_FORMAT" %}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Blood Type Compatibility Guide -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5><i class="fas fa-exchange-alt me-2"></i>Blood Type Compatibility</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered text-center">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Patient Blood Type</th>
+                                    <th>Can Receive From</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="badge bg-danger">O-</span></td>
+                                    <td>O-</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-danger">O+</span></td>
+                                    <td>O-, O+</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-danger">A-</span></td>
+                                    <td>O-, A-</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-danger">A+</span></td>
+                                    <td>O-, O+, A-, A+</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-danger">B-</span></td>
+                                    <td>O-, B-</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-danger">B+</span></td>
+                                    <td>O-, O+, B-, B+</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-danger">AB-</span></td>
+                                    <td>O-, A-, B-, AB-</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-danger">AB+</span></td>
+                                    <td>All blood types</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

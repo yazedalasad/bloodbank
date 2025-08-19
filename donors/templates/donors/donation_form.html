@@ -1,0 +1,362 @@
+{% extends 'donors/base.html' %}
+{% block content %}
+
+<style>
+  /* RTL Form Styling */
+  .form-floating {
+    direction: rtl;
+    text-align: right;
+  }
+  .form-floating > label {
+    right: auto !important;
+    left: 0;
+    padding-right: 1.5rem;
+  }
+  .form-control, .form-select {
+    text-align: right;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    background-color: #f9f9f9;
+    transition: all 0.3s ease;
+  }
+  
+  .form-control:focus, .form-select:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+    background-color: #fff;
+  }
+  
+  /* Validation Messages */
+  .invalid-feedback {
+    text-align: right;
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+    color: #dc3545;
+  }
+  
+  /* Input Validation States */
+  .is-invalid {
+    border-color: #dc3545;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: left calc(0.375em + 0.375rem) center;
+    background-size: calc(0.75em + 0.75rem) calc(0.75em + 0.75rem);
+  }
+  
+  .is-valid {
+    border-color: #198754;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: left calc(0.375em + 0.375rem) center;
+    background-size: calc(0.75em + 0.75rem) calc(0.75em + 0.75rem);
+  }
+  
+  /* Custom Hover Effects */
+  .hover-effect {
+    transition: all 0.3s ease;
+    border-radius: 12px;
+  }
+  .hover-effect:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(230, 57, 70, 0.15) !important;
+  }
+  
+  /* Form Section Styling */
+  .form-section {
+    background-color: #fff;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    border: 1px solid #f0f0f0;
+  }
+  
+  .form-section-header {
+    border-bottom: 2px solid #f8d7da;
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+    color: #dc3545;
+    font-weight: 600;
+    font-size: 1.25rem;
+  }
+  
+  /* Input Box Titles */
+  .input-title {
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 8px;
+    display: block;
+    text-align: right;
+  }
+  
+  /* Notes Textarea */
+  #id_notes {
+    min-height: 120px;
+    resize: vertical;
+  }
+  
+  /* Placeholder styling */
+  ::placeholder {
+    color: #aaa !important;
+    opacity: 1;
+  }
+  
+  /* Step Process */
+  .process-step {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+  .step-number {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 15px;
+    flex-shrink: 0;
+  }
+  .step-content {
+    flex-grow: 1;
+  }
+  
+  /* Donation Details Special Styling */
+  .donation-details {
+    background: linear-gradient(135deg, #fff8f8 0%, #fff 100%);
+    border-left: 4px solid #dc3545;
+  }
+  
+  .donation-details .form-section-header {
+    color: #dc3545;
+    border-bottom: 2px solid #f8d7da;
+  }
+  
+  /* Input Group Styling */
+  .input-group-custom {
+    position: relative;
+    margin-bottom: 1.5rem;
+  }
+  
+  .input-group-custom .input-title {
+    display: flex;
+    align-items: center;
+  }
+  
+  .input-group-custom .input-title i {
+    margin-left: 8px;
+    color: #dc3545;
+  }
+</style>
+
+<div class="row g-4">
+  <!-- Main Form Column -->
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-lg hover-effect">
+      <div class="card-header bg-danger text-white py-3">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-tint fa-2x me-3"></i>
+          <h3 class="mb-0">טופס תרומת דם חדשה</h3>
+        </div>
+      </div>
+      <div class="card-body p-4">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          
+          <!-- Donor Information Section -->
+          <div class="form-section">
+            <h4 class="form-section-header">
+              <i class="fas fa-user-circle me-2"></i>פרטי התורם
+            </h4>
+            
+            <div class="row g-3">
+              <!-- Donor Selection -->
+              <div class="col-md-12">
+                <div class="input-group-custom">
+                  <span class="input-title">
+                    <i class="fas fa-user-tag"></i>
+                    בחירת תורם
+                  </span>
+                  <div class="form-floating">
+                    {{ form.donor }}
+                    <label for="{{ form.donor.id_for_label }}">בחר תורם מהרשימה</label>
+                    {% if form.donor.errors %}
+                      <div class="invalid-feedback">
+                        {% for error in form.donor.errors %}
+                          {{ error }}
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Donation Details Section - Enhanced Design -->
+          <div class="form-section donation-details">
+            <h4 class="form-section-header">
+              <i class="fas fa-heartbeat me-2"></i>פרטי התרומה
+            </h4>
+            
+            <div class="row g-3">
+              <!-- Donation Date -->
+              <div class="col-md-6">
+                <div class="input-group-custom">
+                  <span class="input-title">
+                    <i class="far fa-calendar-alt"></i>
+                    תאריך התרומה
+                  </span>
+                  <div class="form-floating">
+                    <input type="date" name="donation_date" class="form-control" id="id_donation_date" required>
+                    <label for="id_donation_date">בחר תאריך</label>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Donation Volume -->
+              <div class="col-md-6">
+                <div class="input-group-custom">
+                  <span class="input-title">
+                    <i class="fas fa-weight"></i>
+                    נפח דם
+                  </span>
+                  <div class="form-floating">
+                    {{ form.volume_ml }}
+                    <label for="{{ form.volume_ml.id_for_label }}">הזן נפח במ"ל</label>
+                    {% if form.volume_ml.errors %}
+                      <div class="invalid-feedback">
+                        {% for error in form.volume_ml.errors %}
+                          {{ error }}
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Donation Notes -->
+              <div class="col-12">
+                <div class="input-group-custom">
+                  <span class="input-title">
+                    <i class="fas fa-notes-medical"></i>
+                    הערות רפואיות
+                  </span>
+                  <div class="form-floating">
+                    {{ form.notes }}
+                    <label for="{{ form.notes.id_for_label }}">הזן הערות רפואיות</label>
+                    {% if form.notes.errors %}
+                      <div class="invalid-feedback">
+                        {% for error in form.notes.errors %}
+                          {{ error }}
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-danger btn-lg w-100 py-3 hover-effect">
+            <i class="fas fa-save me-2"></i>שמור תרומה
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Information Sidebar -->
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-lg sticky-top hover-effect" style="top: 20px;">
+      <div class="card-header bg-danger text-white py-3">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-info-circle fa-2x me-3"></i>
+          <h4 class="mb-0">הנחיות תרומת דם</h4>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="process-step">
+          <div class="step-number bg-danger text-white">1</div>
+          <div class="step-content">
+            <h5 class="text-danger"><i class="fas fa-user-check me-2"></i>זיהוי תורם</h5>
+            <p>יש לוודא שהתורם מזוהה במערכת ומופיע כפעיל</p>
+          </div>
+        </div>
+
+        <div class="process-step mt-3">
+          <div class="step-number bg-danger text-white">2</div>
+          <div class="step-content">
+            <h5 class="text-danger"><i class="fas fa-vial me-2"></i>בדיקות מקדימות</h5>
+            <p>מדידת המוגלובין, לחץ דם ודופק</p>
+          </div>
+        </div>
+
+        <div class="process-step mt-3">
+          <div class="step-number bg-danger text-white">3</div>
+          <div class="step-content">
+            <h5 class="text-danger"><i class="fas fa-syringe me-2"></i>לקיחת הדם</h5>
+            <p>תהליך אורך 7-10 דקות. נפח סטנדרטי 450 מ"ל</p>
+          </div>
+        </div>
+
+        <div class="process-step mt-3">
+          <div class="step-number bg-danger text-white">4</div>
+          <div class="step-content">
+            <h5 class="text-danger"><i class="fas fa-band-aid me-2"></i>סיום התהליך</h5>
+            <p>חבישת המקום ומנוחה של 10 דקות</p>
+          </div>
+        </div>
+
+        <div class="alert alert-warning mt-4">
+          <h5 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>דרישות תרומה</h5>
+          <ul class="mb-0">
+            <li>גיל 18-65</li>
+            <li>משקל מינימלי 50 ק"ג</li>
+            <li>הפסקה של 3 חודשים בין תרומות</li>
+            <li>המוגלובין מינימלי: 12.5 גר'/ד"ל</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Set today's date as default
+  document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('id_donation_date').value = today;
+    
+    // Add Hebrew placeholder for notes
+    document.getElementById('id_notes').placeholder = "הזן כאן הערות רפואיות רלוונטיות...";
+    
+    // Add validation
+    var forms = document.getElementsByClassName('needs-validation');
+    var validation = Array.prototype.filter.call(forms, function(form) {
+      form.addEventListener('submit', function(event) {
+        if (form.checkValidity() === false) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+      }, false);
+    });
+  });
+</script>
+
+<!-- Add this at the top of your donation_form.html template -->
+{% if messages %}
+<div class="container mt-3">
+  {% for message in messages %}
+    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}success{% endif %} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}

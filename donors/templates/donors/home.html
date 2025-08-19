@@ -1,0 +1,80 @@
+{% extends 'donors/base.html' %}
+{% block content %}
+
+<div class="hero-section text-center py-5 mb-5 bg-light rounded-3">
+  <div class="container">
+    <h1 class="display-4 fw-bold text-danger mb-4">
+      <i class="fas fa-heartbeat me-2"></i>מערכת ניהול בנק הדם
+    </h1>
+    <p class="lead fs-4 text-muted mb-4">
+      הצלת חיים באמצעות ניהול תרומות דם יעיל
+    </p>
+    <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
+      <a href="{% url 'donor_create' %}" class="btn btn-danger btn-lg px-4 gap-3">
+        <i class="fas fa-user-plus me-2"></i>רישום תורם חדש
+      </a>
+      <a href="{% url 'request_blood' %}" class="btn btn-outline-danger btn-lg px-4">
+        <i class="fas fa-hand-holding-medical me-2"></i>בקשת דם
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 py-5">
+  <div class="col-md-4">
+    <div class="card h-100 border-danger">
+      <div class="card-body text-center">
+        <i class="fas fa-users fa-3x text-danger mb-3"></i>
+        <h3 class="card-title">ניהול תורמים</h3>
+        <p class="card-text">
+          ניהול פרטי תורמי דם ומעקב אחר כשירות תורמים
+        </p>
+        <a href="{% url 'donor_list' %}" class="btn btn-outline-danger">
+          הצג תורמים <i class="fas fa-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card h-100 border-danger">
+      <div class="card-body text-center">
+        <i class="fas fa-tint fa-3x text-danger mb-3"></i>
+        <h3 class="card-title">מלאי דם</h3>
+        <p class="card-text">
+          מעקב אחר מלאי הדם לפי סוגים וניהול הפצה
+        </p>
+        <a href="{% url 'inventory_report' %}" class="btn btn-outline-danger">
+          הצג מלאי <i class="fas fa-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card h-100 border-danger">
+      <div class="card-body text-center">
+        <i class="fas fa-chart-line fa-3x text-danger mb-3"></i>
+        <h3 class="card-title">דוחות וסטטיסטיקות</h3>
+        <p class="card-text">
+          יצירת דוחות וניתוח מדדי ביצוע של בנק הדם
+        </p>
+        <a href="#" class="btn btn-outline-danger">
+          הצג דוחות <i class="fas fa-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="alert alert-danger mt-4">
+  <div class="d-flex align-items-center">
+    <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+    <div>
+      <h4 class="alert-heading">מוקד חירום</h4>
+      <p class="mb-0">לבקשות דם דחופות, חייגו למוקד 24/7: <strong>03-1234567</strong></p>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

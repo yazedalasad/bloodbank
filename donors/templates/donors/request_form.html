@@ -1,0 +1,345 @@
+{% extends 'donors/base.html' %}
+{% block content %}
+
+<style>
+  /* Custom Styles */
+  .form-section-title {
+    font-weight: 600;
+    color: #dc3545;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    font-size: 1.1rem;
+  }
+  
+  .form-section-title i {
+    margin-left: 10px;
+    font-size: 1.2rem;
+  }
+  
+  .input-group-custom {
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+  
+  .input-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #555;
+    display: flex;
+    align-items: center;
+  }
+  
+  .input-label i {
+    margin-left: 8px;
+    color: #dc3545;
+    font-size: 0.9rem;
+  }
+  
+  .input-hint {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-top: 5px;
+    text-align: right;
+    display: block;
+  }
+  
+  /* Form Control Styling */
+  .form-control, .form-select {
+    border-radius: 8px;
+    padding: 12px 15px;
+    border: 1px solid #e0e0e0;
+    transition: all 0.3s ease;
+  }
+  
+  .form-control:focus, .form-select:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.15);
+  }
+  
+  /* Priority Styling */
+  .priority-badge {
+    font-size: 0.8rem;
+    padding: 5px 10px;
+    border-radius: 20px;
+  }
+  
+  .priority-normal { background-color: #28a74520; color: #28a745; }
+  .priority-urgent { background-color: #ffc10720; color: #ffc107; }
+  .priority-critical { background-color: #dc354520; color: #dc3545; }
+  
+  /* Switch Styling */
+  .form-switch .form-check-input {
+    width: 3em;
+    height: 1.5em;
+    margin-left: 0.5em;
+  }
+  
+  .form-switch .form-check-label {
+    font-weight: 600;
+  }
+  
+  /* Card Styling */
+  .form-section-card {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    margin-bottom: 25px;
+    overflow: hidden;
+  }
+  
+  .form-section-header {
+    background-color: #fff5f5;
+    border-bottom: 1px solid #f8d7da;
+    padding: 15px 20px;
+    font-weight: 600;
+    color: #dc3545;
+    display: flex;
+    align-items: center;
+  }
+  
+  .form-section-header i {
+    margin-left: 10px;
+    font-size: 1.2rem;
+  }
+  
+  /* Hover Effects */
+  .hover-effect {
+    transition: all 0.3s ease;
+  }
+  
+  .hover-effect:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(220, 53, 69, 0.1);
+  }
+</style>
+
+<div class="row g-4">
+  <!-- Main Form Column -->
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-lg hover-effect">
+      <div class="card-header bg-danger text-white py-3">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-hand-holding-medical fa-2x me-3"></i>
+          <h3 class="mb-0">בקשת דם דחופה</h3>
+        </div>
+      </div>
+      <div class="card-body p-4">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          
+          <!-- Patient Information Section -->
+          <div class="form-section-card">
+            <div class="form-section-header">
+              <i class="fas fa-procedures"></i>
+              <h4 class="mb-0">פרטי המטופל</h4>
+            </div>
+            <div class="card-body">
+              <!-- Patient Name -->
+              <div class="input-group-custom">
+                <label class="input-label" for="{{ form.patient_name.id_for_label }}">
+                  <i class="fas fa-user"></i>
+                  שם המטופל
+                </label>
+                {{ form.patient_name }}
+                <small class="input-hint">השם המלא כפי שמופיע בתיק הרפואי</small>
+                {% if form.patient_name.errors %}
+                  <div class="invalid-feedback d-block">
+                    {% for error in form.patient_name.errors %}
+                      {{ error }}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Blood Request Details -->
+          <div class="form-section-card">
+            <div class="form-section-header">
+              <i class="fas fa-tint"></i>
+              <h4 class="mb-0">פרטי הבקשה</h4>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <!-- Blood Type Needed -->
+                <div class="col-md-6">
+                  <div class="input-group-custom">
+                    <label class="input-label" for="{{ form.blood_type_needed.id_for_label }}">
+                      <i class="fas fa-vial"></i>
+                      סוג דם נדרש
+                    </label>
+                    {{ form.blood_type_needed }}
+                    {% if form.blood_type_needed.errors %}
+                      <div class="invalid-feedback d-block">
+                        {% for error in form.blood_type_needed.errors %}
+                          {{ error }}
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+                
+                <!-- Units Needed -->
+                <div class="col-md-6">
+                  <div class="input-group-custom">
+                    <label class="input-label" for="{{ form.units_needed.id_for_label }}">
+                      <i class="fas fa-syringe"></i>
+                      מספר יחידות
+                    </label>
+                    {{ form.units_needed }}
+                    <small class="input-hint">מקסימום 10 יחידות לבקשה</small>
+                    {% if form.units_needed.errors %}
+                      <div class="invalid-feedback d-block">
+                        {% for error in form.units_needed.errors %}
+                          {{ error }}
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+                
+                <!-- Priority -->
+                <div class="col-md-6">
+                  <div class="input-group-custom">
+                    <label class="input-label">
+                      <i class="fas fa-exclamation-circle"></i>
+                      דחיפות הבקשה
+                    </label>
+                    {{ form.priority }}
+                    {% if form.priority.errors %}
+                      <div class="invalid-feedback d-block">
+                        {% for error in form.priority.errors %}
+                          {{ error }}
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+                
+                <!-- Emergency Checkbox -->
+                <div class="col-md-6">
+                  <div class="input-group-custom" style="padding-top: 2rem;">
+                    <div class="form-check form-switch">
+                      {{ form.emergency }}
+                      <label class="form-check-label" for="{{ form.emergency.id_for_label }}">
+                        <i class="fas fa-ambulance me-2"></i>
+                        בקשה דחופה
+                      </label>
+                    </div>
+                    {% if form.emergency.errors %}
+                      <div class="invalid-feedback d-block">
+                        {% for error in form.emergency.errors %}
+                          {{ error }}
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-danger btn-lg w-100 py-3 hover-effect">
+            <i class="fas fa-paper-plane me-2"></i>שלח בקשה
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Information Sidebar -->
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-lg sticky-top hover-effect" style="top: 20px;">
+      <div class="card-header bg-danger text-white py-3">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-info-circle fa-2x me-3"></i>
+          <h4 class="mb-0">מדריך הגשת בקשה</h4>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="alert alert-danger">
+          <h5><i class="fas fa-ambulance me-2"></i>בקשות דחופות</h5>
+          <p class="mb-0">במקרה חירום רפואי, סמן "בקשה דחופה" והמערכת תחפש באופן אוטומטי דם מסוג O-.</p>
+        </div>
+        
+        <h5 class="mt-4"><i class="fas fa-vial me-2"></i>סוגי דם מתאימים</h5>
+        <div class="blood-type-list">
+          {% for blood_type, compatible in blood_types.items %}
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+              <span class="font-weight-bold">{{ blood_type }}</span>
+              <span class="text-muted">{{ compatible }}</span>
+            </div>
+          {% endfor %}
+        </div>
+        
+        <div class="alert alert-light mt-4 border">
+          <h5><i class="fas fa-clock me-2"></i>זמני מענה</h5>
+          <ul class="mb-0">
+            <li class="d-flex justify-content-between py-1">
+              <span class="priority-badge priority-critical">מצב קריטי</span>
+              <span>מענה מיידי</span>
+            </li>
+            <li class="d-flex justify-content-between py-1">
+              <span class="priority-badge priority-urgent">דחוף</span>
+              <span>תוך שעה</span>
+            </li>
+            <li class="d-flex justify-content-between py-1">
+              <span class="priority-badge priority-normal">רגיל</span>
+              <span>תוך 4 שעות</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Priority indicator
+  document.addEventListener('DOMContentLoaded', function() {
+    const prioritySelect = document.getElementById('{{ form.priority.id_for_label }}');
+    const emergencyCheckbox = document.getElementById('{{ form.emergency.id_for_label }}');
+    
+    // Set critical priority if emergency is checked
+    emergencyCheckbox.addEventListener('change', function() {
+      if(this.checked) {
+        prioritySelect.value = 'critical';
+      }
+    });
+    
+    // Validate emergency/critical consistency
+    document.querySelector('form').addEventListener('submit', function(e) {
+      if(emergencyCheckbox.checked && prioritySelect.value !== 'critical') {
+        e.preventDefault();
+        alert('בקשה דחופה חייבת להיות מסומנת כמצב קריטי');
+        prioritySelect.focus();
+      }
+    });
+    
+    // Add styling to priority options
+    const stylePriorityOption = (option) => {
+      if (option.value === 'normal') {
+        option.classList.add('priority-normal');
+      } else if (option.value === 'urgent') {
+        option.classList.add('priority-urgent');
+      } else if (option.value === 'critical') {
+        option.classList.add('priority-critical');
+      }
+    };
+    
+    // Style existing options
+    Array.from(prioritySelect.options).forEach(stylePriorityOption);
+    
+    // Style dynamically if changed
+    prioritySelect.addEventListener('change', function() {
+      Array.from(this.options).forEach(opt => {
+        opt.classList.remove('priority-normal', 'priority-urgent', 'priority-critical');
+        stylePriorityOption(opt);
+      });
+    });
+  });
+</script>
+
+{% endblock %}

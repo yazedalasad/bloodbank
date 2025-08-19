@@ -1,0 +1,313 @@
+{% extends 'donors/base.html' %}
+{% block content %}
+
+<div class="row g-4">
+  <!-- Main Form Column -->
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-lg">
+      <div class="card-header bg-danger text-white py-3">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-tint fa-2x me-3"></i>
+          <h3 class="mb-0">טופס תרומת דם</h3>
+        </div>
+      </div>
+      <div class="card-body p-4">
+        <form method="post" action="{% url 'donor_create' %}">
+          {% csrf_token %}
+          
+          <!-- Personal Information Section -->
+          <div class="card mb-4 border-0 shadow-sm hover-effect">
+            <div class="card-header bg-light-danger bg-gradient py-3">
+              <h4 class="mb-0 text-danger">
+                <i class="fas fa-user-circle me-2"></i>מידע אישי
+              </h4>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.first_name.id_for_label }}" class="form-label">שם פרטי</label>
+                    {{ form.first_name }}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.last_name.id_for_label }}" class="form-label">שם משפחה</label>
+                    {{ form.last_name }}
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.national_id.id_for_label }}" class="form-label">תעודת זהות</label>
+                    {{ form.national_id }}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.phone_number.id_for_label }}" class="form-label">טלפון</label>
+                    {{ form.phone_number }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Health Information Section -->
+          <div class="card mb-4 border-0 shadow-sm hover-effect health-section">
+            <div class="card-header bg-light-danger bg-gradient py-3">
+              <h4 class="mb-0 text-danger">
+                <i class="fas fa-heartbeat me-2"></i>מידע רפואי
+              </h4>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.blood_type.id_for_label }}" class="form-label">סוג דם</label>
+                    {{ form.blood_type }}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.date_of_birth.id_for_label }}" class="form-label">תאריך לידה</label>
+                    {{ form.date_of_birth }}
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="form-label"><i class="fas fa-smoking me-2"></i>סטטוס עישון</label>
+                    {{ form.smoking_status }}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="form-label"><i class="fas fa-wine-glass-alt me-2"></i>צריכת אלכוהול</label>
+                    {{ form.alcohol_use }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-danger btn-lg w-100 py-3 shadow hover-effect">
+            <i class="fas fa-save me-2"></i>שמור תורם חדש
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Information Sidebar -->
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-lg sticky-top" style="top: 20px;">
+      <div class="card-header bg-danger text-white py-3">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-info-circle fa-2x me-3"></i>
+          <h4 class="mb-0">תהליך תרומת הדם</h4>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="process-step hover-effect">
+          <div class="step-number bg-danger text-white">1</div>
+          <div class="step-content">
+            <h5 class="text-danger"><i class="fas fa-clipboard-check me-2"></i>רישום ובדיקות</h5>
+            <p>מילוי טופס רפואי ובדיקת תעודה מזהה. נדרשת תעודת זהות או רישיון נהיגה.</p>
+          </div>
+        </div>
+
+        <div class="process-step hover-effect mt-3">
+          <div class="step-number bg-danger text-white">2</div>
+          <div class="step-content">
+            <h5 class="text-danger"><i class="fas fa-stethoscope me-2"></i>בדיקה רפואית</h5>
+            <p>מדידת חום, דופק, לחץ דם ורמת המוגלובין. הבדיקה אורכת כ-5 דקות.</p>
+          </div>
+        </div>
+
+        <div class="process-step hover-effect mt-3">
+          <div class="step-number bg-danger text-white">3</div>
+          <div class="step-content">
+            <h5 class="text-danger"><i class="fas fa-heartbeat me-2"></i>תרומת הדם</h5>
+            <p>תהליך התרומה אורך כ-10 דקות. נלקחים 450 מ"ל דם באמצעות מחט סטרילית חד פעמית.</p>
+          </div>
+        </div>
+
+        <div class="process-step hover-effect mt-3">
+          <div class="step-number bg-danger text-white">4</div>
+          <div class="step-content">
+            <h5 class="text-danger"><i class="fas fa-couch me-2"></i>מנוחה והתאוששות</h5>
+            <p>מנוחה של 10-15 דקות עם כיבוד קל ושתייה. אין לקום בפתאומיות.</p>
+          </div>
+        </div>
+
+        <div class="alert alert-warning mt-4 shadow-sm hover-effect">
+          <h5 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>לפני התרומה:</h5>
+          <ul class="mb-0">
+            <li><i class="fas fa-bed me-2"></i>יש לישון לפחות 6 שעות בלילה שלפני</li>
+            <li><i class="fas fa-glass-whiskey me-2"></i>לשתות 2-3 כוסות מים לפני התרומה</li>
+            <li><i class="fas fa-utensils me-2"></i>לאכול ארוחה קלה 3 שעות לפני התרומה</li>
+            <li><i class="fas fa-smoking-ban me-2"></i>להימנע מעישון שעה לפני ואחרי התרומה</li>
+          </ul>
+        </div>
+
+        <div class="alert alert-success mt-3 shadow-sm hover-effect">
+          <h5 class="alert-heading"><i class="fas fa-gift me-2"></i>הטבות לתורמים:</h5>
+          <ul class="mb-0">
+            <li><i class="fas fa-coffee me-2"></i>כיבוד והתרעננות לאחר התרומה</li>
+            <li><i class="fas fa-certificate me-2"></i>תעודת תורם דם</li>
+            <li><i class="fas fa-heart me-2"></i>בדיקות דם חינם כחלק מהתהליך</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* ===== Base Styles ===== */
+  .hover-effect {
+    transition: all 0.3s ease;
+    border-radius: 8px;
+  }
+  
+  .hover-effect:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(230, 57, 70, 0.15) !important;
+  }
+
+  /* ===== Unified Form Styling ===== */
+  .form-group {
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+
+  /* Standard label styling (above inputs) */
+  .form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #2d3748;
+    text-align: right;
+    font-size: 0.95rem;
+  }
+
+  /* Input field styling */
+  .form-control, .form-select {
+    width: 100%;
+    padding: 0.85rem 1.25rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    background-color: #f8fafc;
+    font-size: 1rem;
+    color: #1a202c;
+    transition: all 0.3s;
+    text-align: right;
+    direction: rtl;
+    height: auto;
+  }
+
+  /* Focus states */
+  .form-control:focus, .form-select:focus {
+    border-color: #e63946;
+    box-shadow: 0 0 0 3px rgba(230, 57, 70, 0.15);
+    background-color: #fff;
+    outline: none;
+  }
+
+  /* Date input specific styling */
+  input[type="date"] {
+    direction: ltr;
+    text-align: right;
+    padding-left: 1rem;
+  }
+
+  /* Select dropdown styling */
+  .form-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: left 0.75rem center;
+    background-size: 16px 12px;
+    padding-left: 2.5rem;
+  }
+
+  /* Health Section Specific Styling */
+  .health-section .form-group {
+    margin-bottom: 1.75rem;
+  }
+
+  .health-section .form-label {
+    color: #495057;
+    font-size: 0.95rem;
+  }
+
+  /* ===== Card Styling ===== */
+  .card {
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  }
+
+  .card-header {
+    border-bottom: none;
+    padding: 1.25rem 1.5rem;
+  }
+
+  .card-body {
+    padding: 1.5rem;
+  }
+
+  /* ===== Process Steps ===== */
+  .process-step {
+    display: flex;
+    align-items: flex-start;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-right: 4px solid #e63946;
+    border-left: none;
+    margin-bottom: 1rem;
+  }
+
+  .step-number {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 15px;
+    margin-right: 0;
+    flex-shrink: 0;
+    font-weight: bold;
+    background-color: #e63946;
+    color: white;
+  }
+
+  .step-content {
+    flex-grow: 1;
+    text-align: right;
+  }
+
+  /* ===== Responsive Adjustments ===== */
+  @media (max-width: 768px) {
+    .form-control, .form-select {
+      padding: 0.75rem 1rem !important;
+    }
+  }
+</style>
+
+{% if form.errors %}
+<div class="alert alert-danger">
+    <strong>שגיאות בטופס:</strong>
+    <ul>
+    {% for field, errors in form.errors.items %}
+        {% for error in errors %}
+            <li>{{ field }}: {{ error }}</li>
+        {% endfor %}
+    {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% endblock %}
