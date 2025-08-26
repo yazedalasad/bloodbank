@@ -35,32 +35,51 @@ def donor_list(request):
     if search_query:
         donors = donors.filter(national_id__icontains=search_query)
     
+    # Get blood type distribution BEFORE applying blood type filter
+    # This ensures we calculate percentages against all donors, not filtered ones
+    all_blood_types = [choice[0] for choice in Donor.BLOOD_TYPES]
+    
+    # Get counts for ALL donors (before blood type filter)
+    base_queryset = Donor.objects.all()
+    if search_query:
+        base_queryset = base_queryset.filter(national_id__icontains=search_query)
+    
+    blood_type_counts = base_queryset.values('blood_type').annotate(
+        count=Count('id')
+    )
+    
+    # Create a dictionary for blood type counts
+    count_dict = {item['blood_type']: item['count'] for item in blood_type_counts}
+    
+    # Calculate total donors (before blood type filter)
+    total_for_percentage = base_queryset.count()
+    
+    # Calculate percentages
+    blood_type_stats = []
+    for blood_type in all_blood_types:
+        count = count_dict.get(blood_type, 0)
+        percentage = (count / total_for_percentage * 100) if total_for_percentage > 0 else 0
+        blood_type_stats.append({
+            'blood_type': blood_type,
+            'count': count,
+            'percentage': round(percentage, 1)
+        })
+    
+    # Sort by count descending
+    blood_type_stats.sort(key=lambda x: x['count'], reverse=True)
+    
+    # NOW apply blood type filter to the main queryset
     if blood_type_filter:
         donors = donors.filter(blood_type=blood_type_filter)
     
-    # Calculate blood type distribution
+    # Get final count for pagination and stats
     total_donors = donors.count()
-    blood_type_stats = []
-    
-    # Get counts for each blood type
-    blood_type_counts = donors.values('blood_type').annotate(
-        count=Count('id')
-    ).order_by('-count')
-    
-    # Calculate percentages
-    for item in blood_type_counts:
-        percentage = (item['count'] / total_donors * 100) if total_donors > 0 else 0
-        blood_type_stats.append({
-            'blood_type': item['blood_type'],
-            'count': item['count'],
-            'percentage': round(percentage, 1)
-        })
     
     # Prepare donor stats
     donor_stats = {
         'total': total_donors,
         'o_negative': donors.filter(blood_type='O-').count(),
-        'blood_type_distribution': blood_type_stats
+        'blood_type_distribution': blood_type_stats  # This shows distribution of ALL blood types
     }
     
     # Pagination
@@ -262,3 +281,115 @@ def home(request):
         'pending_requests': BloodRequest.objects.filter(fulfilled=False).count()
     }
     return render(request, 'donors/home.html', {'stats': stats})
+
+
+
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.db.models import Sum
+from .models import Donor, Donation, BloodRequest
+from django.utils import timezone
+from django.http import JsonResponse
+
+def emergency_request(request):
+    if request.method == 'POST':
+        units_needed = int(request.POST.get('units_needed', 0))
+        
+        if units_needed <= 0:
+            messages.error(request, 'מספר היחידות חייב להיות גדול מ-0')
+            return redirect('emergency_request')
+        
+        # Get all O- donors with their available blood amount
+        o_negative_donors = Donor.objects.filter(blood_type='O-').annotate(
+            total_donated=Sum('donations__volume_ml')
+        ).order_by('total_donated')  # Prefer donors who donated less
+        
+        remaining_units = units_needed
+        donation_messages = []
+        
+        for donor in o_negative_donors:
+            if remaining_units <= 0:
+                break
+                
+            # Calculate how much this donor can give (max 500ml per donation = ~1 unit)
+            can_give = min(remaining_units, 1)  # 1 unit per donor for emergency
+            
+            if can_give > 0:
+                # Create donation record
+                donation = Donation.objects.create(
+                    donor=donor,
+                    donation_date=timezone.now().date(),
+                    volume_ml=can_give * 450,  # Convert units to ml (450ml per unit)
+                    notes=f"תרומת חירום אוטומטית - {can_give} יחידות",
+                    is_approved=True
+                )
+                
+                donation_messages.append(
+                    f"נלקח דם מתורם {donor.first_name} {donor.last_name} "
+                    f"(ת\"ז: {donor.national_id}) - {can_give} יחידות"
+                )
+                
+                remaining_units -= can_give
+        
+        # Create blood request record
+        blood_request = BloodRequest.objects.create(
+            patient_name="חירום - מטופל אנונימי",
+            blood_type_needed='O-',
+            units_needed=units_needed,
+            priority='critical',
+            emergency=True,
+            fulfilled=(remaining_units == 0)
+        )
+        
+        # Prepare success message
+        if remaining_units == 0:
+            success_msg = (
+                f"✅ בקשת החירום סופקה במלואה! {units_needed} יחידות O- נלקחו בהצלחה.\n"
+                f"פירוט:\n" + "\n".join(donation_messages)
+            )
+            messages.success(request, success_msg)
+        else:
+            partial_msg = (
+                f"⚠️ סופקו רק {units_needed - remaining_units} מתוך {units_needed} יחידות.\n"
+                f"חסרות {remaining_units} יחידות.\n"
+                f"פירוט התרומות:\n" + "\n".join(donation_messages)
+            )
+            messages.warning(request, partial_msg)
+        
+        return redirect('emergency_request')
+    
+    # Get statistics for the template
+    
+    o_negative_count = Donor.objects.filter(blood_type='O-').count()
+    total_o_negative_ml = Donation.objects.filter(
+        donor__blood_type='O-'
+    ).aggregate(total=Sum('volume_ml'))['total'] or 0
+    total_o_negative_units = total_o_negative_ml // 450
+    
+    # Get recent emergency requests
+    recent_requests = BloodRequest.objects.filter(
+        emergency=True
+    ).order_by('-date_requested')[:10]
+    
+    context = {
+        'o_negative_count': o_negative_count,
+        'total_o_negative_units': total_o_negative_units,
+        'available_units': o_negative_count,  # Each donor can give 1 unit
+        'recent_requests': recent_requests
+    }
+    
+    return render(request, 'donors/emergency_request.html', context)
+
+def get_emergency_stats(request):
+    """AJAX endpoint for real-time statistics"""
+    o_negative_count = Donor.objects.filter(blood_type='O-').count()
+    recent_donations = Donation.objects.filter(
+        donor__blood_type='O-',
+        donation_date__gte=timezone.now().date() - timezone.timedelta(days=30)
+    ).count()
+    
+    return JsonResponse({
+        'available_donors': o_negative_count,
+        'recent_donations': recent_donations,
+        'estimated_available_units': o_negative_count - recent_donations
+    })

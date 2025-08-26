@@ -1,0 +1,398 @@
+{% extends 'donors/base.html' %}
+{% block content %}
+
+<style>
+.emergency-alert {
+    background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+    border: none;
+    border-radius: 15px;
+    color: white;
+    box-shadow: 0 10px 30px rgba(255, 0, 0, 0.3);
+}
+
+.emergency-card {
+    border: 3px solid #dc3545;
+    border-radius: 15px;
+    box-shadow: 0 15px 35px rgba(220, 53, 69, 0.2);
+}
+
+.emergency-btn {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    border: none;
+    padding: 20px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.emergency-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 30px rgba(220, 53, 69, 0.4);
+}
+
+.stats-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    border-left: 4px solid #dc3545;
+}
+
+.unit-counter {
+    font-size: 3rem;
+    font-weight: bold;
+    color: #dc3545;
+}
+
+.sidebar-info {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+}
+
+.info-icon {
+    width: 40px;
+    height: 40px;
+    background: #dc3545;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 15px;
+    flex-shrink: 0;
+}
+
+.quick-stats {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 15px;
+    margin-top: 20px;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #00bc8c;
+}
+
+.alert-status {
+    background: rgba(220, 53, 69, 0.2);
+    border: 2px solid #dc3545;
+    border-radius: 10px;
+    padding: 15px;
+    margin-top: 20px;
+}
+
+.status-indicator {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 10px;
+}
+
+.status-active {
+    background: #00bc8c;
+    box-shadow: 0 0 10px #00bc8c;
+}
+
+.status-warning {
+    background: #f39c12;
+    box-shadow: 0 0 10px #f39c12;
+}
+
+.status-critical {
+    background: #e74c3c;
+    box-shadow: 0 0 10px #e74c3c;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+</style>
+
+<div class="container-fluid py-4">
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Emergency Alert -->
+            <div class="alert emergency-alert text-center mb-4">
+                <h1 class="mb-2"><i class="fas fa-exclamation-triangle me-2"></i>בקשת חירום</h1>
+                <p class="mb-0">מערכת אוטומטית לאיסוף דם מסוג O- (תורם אוניברסלי)</p>
+            </div>
+
+            <div class="card emergency-card mb-4">
+                <div class="card-header bg-danger text-white py-3">
+                    <h3 class="mb-0"><i class="fas fa-tint me-2"></i>בקשת דם חירום</h3>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" id="emergencyForm">
+                        {% csrf_token %}
+                        
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label fs-5">
+                                    <i class="fas fa-blood me-2"></i>מספר יחידות דם נדרש
+                                </label>
+                                <input type="number" name="units_needed" class="form-control form-control-lg" 
+                                       min="1" max="{{ available_units }}" required 
+                                       placeholder="הזן מספר יחידות">
+                                <div class="form-text">מקסימום {{ available_units }} יחידות זמינות</div>
+                            </div>
+                            
+                            <div class="col-12">
+                                <div class="alert alert-warning">
+                                    <h5><i class="fas fa-info-circle me-2"></i>מידע חשוב:</h5>
+                                    <ul class="mb-0">
+                                        <li>המערכת תפנה אוטומטית לתורמי O-</li>
+                                        <li>כל תורם יכול לתת עד יחידה אחת בחירום</li>
+                                        <li>יתקבל אישור מיידי עם פירוט התרומות</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div class="col-12">
+                                <button type="submit" class="btn emergency-btn w-100">
+                                    <i class="fas fa-bolt me-2"></i>בצע בקשה אוטומטית
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Recent Emergency Requests -->
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h4 class="mb-0"><i class="fas fa-history me-2"></i>בקשות חירום אחרונות</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>תאריך</th>
+                                    <th>יחידות</th>
+                                    <th>סטטוס</th>
+                                    <th>פירוט</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for request in recent_requests %}
+                                <tr>
+                                    <td>{{ request.date_requested|date:"d/m/Y H:i" }}</td>
+                                    <td>{{ request.units_needed }}</td>
+                                    <td>
+                                        {% if request.fulfilled %}
+                                            <span class="badge bg-success">סופק</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">בתהליך</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ request.patient_name }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">אין בקשות חירום אחרונות</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Information -->
+        <div class="col-lg-4">
+            <!-- Emergency Information -->
+            <div class="sidebar-info">
+                <h4 class="text-center mb-4">
+                    <i class="fas fa-info-circle me-2"></i>מידע חירום
+                </h4>
+                
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-tint"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">דם O-</h6>
+                        <small>תורם אוניברסלי - מתאים לכל סוגי הדם</small>
+                    </div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">זמן תגובה</h6>
+                        <small>מערכת אוטומטית - מענה מיידי</small>
+                    </div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-user-md"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">אישור רפואי</h6>
+                        <small>פטור מאישור עבור תורמי O- בחירום</small>
+                    </div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-exclamation"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">התראות</h6>
+                        <small>כל התורמים מקבלים הודעה אוטומטית</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Statistics -->
+            <div class="sidebar-info">
+                <h4 class="text-center mb-4">
+                    <i class="fas fa-chart-bar me-2"></i>סטטיסטיקות מהירות
+                </h4>
+                
+                <div class="quick-stats">
+                    <div class="text-center mb-4">
+                        <div class="stat-number">{{ o_negative_count }}</div>
+                        <div class="text-muted">תורמי O- פעילים</div>
+                    </div>
+                    
+                    <div class="text-center mb-4">
+                        <div class="stat-number">{{ total_o_negative_units }}</div>
+                        <div class="text-muted">יחידות נתרמו</div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="stat-number">{{ available_units }}</div>
+                        <div class="text-muted">יחידות זמינות</div>
+                    </div>
+                </div>
+                
+                <div class="alert-status mt-3">
+                    <h6 class="mb-3">
+                        <i class="fas fa-shield-alt me-2"></i>סטטוס מערכת
+                    </h6>
+                    <div class="d-flex align-items-center">
+                        <span class="status-indicator status-active"></span>
+                        <span>מערכת פעילה - מוכנה לחירום</span>
+                    </div>
+                    <div class="d-flex align-items-center mt-2">
+                        <span class="status-indicator status-warning"></span>
+                        <span>{{ o_negative_count }} תורמים זמינים</span>
+                    </div>
+                    <div class="d-flex align-items-center mt-2">
+                        <span class="status-indicator status-critical"></span>
+                        <span>עדיפות עליונה - O-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Emergency Contacts -->
+            <div class="sidebar-info">
+                <h4 class="text-center mb-4">
+                    <i class="fas fa-phone-alt me-2"></i>אנשי קשר חירום
+                </h4>
+                
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-user-md"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">ד"ר יוסף לוי</h6>
+                        <small>רכז תרומות דם</small>
+                        <div class="text-warning">050-1234567</div>
+                    </div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-nurse"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">שרה כהן</h6>
+                        <small>אחות אחראית</small>
+                        <div class="text-warning">050-7654321</div>
+                    </div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-ambulance"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">חדר מיון</h6>
+                        <small>קו חירום פנימי</small>
+                        <div class="text-warning">*5555</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Blood Compatibility Info -->
+            <div class="sidebar-info">
+                <h4 class="text-center mb-4">
+                    <i class="fas fa-heartbeat me-2"></i>תאימות דם
+                </h4>
+                
+                <div class="alert alert-dark text-center">
+                    <h6 class="mb-2">O- → מתאים לכולם</h6>
+                    <small class="text-success">תורם אוניברסלי</small>
+                </div>
+                
+                <div class="text-center">
+                    <small class="text-muted">
+                        דם O- יכול להינתן לכל סוגי הדם:<br>
+                        A+, A-, B+, B-, AB+, AB-, O+, O-
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Real-time validation
+document.getElementById('emergencyForm').addEventListener('submit', function(e) {
+    const unitsInput = document.querySelector('input[name="units_needed"]');
+    const maxUnits = parseInt('{{ available_units }}');
+    
+    if (parseInt(unitsInput.value) > maxUnits) {
+        e.preventDefault();
+        alert(`⚠️ אין מספיק תורמים זמינים. מקסימום ${maxUnits} יחידות זמינות.`);
+    } else if (parseInt(unitsInput.value) <= 0) {
+        e.preventDefault();
+        alert('מספר היחידות חייב להיות גדול מ-0');
+    }
+});
+
+// Auto-refresh stats every 30 seconds
+setInterval(function() {
+    fetch('/emergency/stats/')
+        .then(response => response.json())
+        .then(data => {
+            document.querySelector('.stat-number').textContent = data.available_donors;
+            document.querySelectorAll('.stat-number')[2].textContent = data.estimated_available_units;
+        });
+}, 30000);
+</script>
+
+{% endblock %}
