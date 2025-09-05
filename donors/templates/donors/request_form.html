@@ -58,6 +58,13 @@
     box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.15);
   }
   
+  /* Read-only field styling */
+  .readonly-field {
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+    opacity: 0.8;
+  }
+  
   /* Priority Styling */
   .priority-badge {
     font-size: 0.8rem;
@@ -142,7 +149,18 @@
                   <i class="fas fa-user"></i>
                   שם המטופל
                 </label>
-                {{ form.patient_name }}
+                {% if is_patient and donor_profile %}
+                  <!-- Read-only for patients -->
+                  <input type="text" class="form-control readonly-field" 
+                         value="{{ donor_profile.first_name }} {{ donor_profile.last_name }}" 
+                         readonly
+                         name="{{ form.patient_name.name }}">
+                  <input type="hidden" name="{{ form.patient_name.name }}" 
+                         value="{{ donor_profile.first_name }} {{ donor_profile.last_name }}">
+                {% else %}
+                  <!-- Editable for doctors -->
+                  {{ form.patient_name }}
+                {% endif %}
                 <small class="input-hint">השם המלא כפי שמופיע בתיק הרפואי</small>
                 {% if form.patient_name.errors %}
                   <div class="invalid-feedback d-block">
@@ -170,7 +188,17 @@
                       <i class="fas fa-vial"></i>
                       סוג דם נדרש
                     </label>
-                    {{ form.blood_type_needed }}
+                    {% if is_patient and donor_profile %}
+                      <!-- Read-only for patients -->
+                      <select class="form-select readonly-field" disabled>
+                        <option selected>{{ donor_profile.get_blood_type_display }}</option>
+                      </select>
+                      <input type="hidden" name="{{ form.blood_type_needed.name }}" 
+                             value="{{ donor_profile.blood_type }}">
+                    {% else %}
+                      <!-- Editable for doctors -->
+                      {{ form.blood_type_needed }}
+                    {% endif %}
                     {% if form.blood_type_needed.errors %}
                       <div class="invalid-feedback d-block">
                         {% for error in form.blood_type_needed.errors %}
@@ -291,6 +319,14 @@
             </li>
           </ul>
         </div>
+
+        <!-- Patient Information Notice -->
+        {% if is_patient and donor_profile %}
+        <div class="alert alert-info mt-4">
+          <h5><i class="fas fa-user-lock me-2"></i>מידע אישי</h5>
+          <p class="mb-0">שמך וסוג הדם שלך מוצגים אוטומטית ולא ניתנים לשינוי. רק רופאים יכולים לשנות מידע זה.</p>
+        </div>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -303,42 +339,44 @@
     const emergencyCheckbox = document.getElementById('{{ form.emergency.id_for_label }}');
     
     // Set critical priority if emergency is checked
-    emergencyCheckbox.addEventListener('change', function() {
-      if(this.checked) {
-        prioritySelect.value = 'critical';
-      }
-    });
-    
-    // Validate emergency/critical consistency
-    document.querySelector('form').addEventListener('submit', function(e) {
-      if(emergencyCheckbox.checked && prioritySelect.value !== 'critical') {
-        e.preventDefault();
-        alert('בקשה דחופה חייבת להיות מסומנת כמצב קריטי');
-        prioritySelect.focus();
-      }
-    });
-    
-    // Add styling to priority options
-    const stylePriorityOption = (option) => {
-      if (option.value === 'normal') {
-        option.classList.add('priority-normal');
-      } else if (option.value === 'urgent') {
-        option.classList.add('priority-urgent');
-      } else if (option.value === 'critical') {
-        option.classList.add('priority-critical');
-      }
-    };
-    
-    // Style existing options
-    Array.from(prioritySelect.options).forEach(stylePriorityOption);
-    
-    // Style dynamically if changed
-    prioritySelect.addEventListener('change', function() {
-      Array.from(this.options).forEach(opt => {
-        opt.classList.remove('priority-normal', 'priority-urgent', 'priority-critical');
-        stylePriorityOption(opt);
+    if (emergencyCheckbox && prioritySelect) {
+      emergencyCheckbox.addEventListener('change', function() {
+        if(this.checked) {
+          prioritySelect.value = 'critical';
+        }
       });
-    });
+      
+      // Validate emergency/critical consistency
+      document.querySelector('form').addEventListener('submit', function(e) {
+        if(emergencyCheckbox.checked && prioritySelect.value !== 'critical') {
+          e.preventDefault();
+          alert('בקשה דחופה חייבת להיות מסומנת כמצב קריטי');
+          prioritySelect.focus();
+        }
+      });
+      
+      // Add styling to priority options
+      const stylePriorityOption = (option) => {
+        if (option.value === 'normal') {
+          option.classList.add('priority-normal');
+        } else if (option.value === 'urgent') {
+          option.classList.add('priority-urgent');
+        } else if (option.value === 'critical') {
+          option.classList.add('priority-critical');
+        }
+      };
+      
+      // Style existing options
+      Array.from(prioritySelect.options).forEach(stylePriorityOption);
+      
+      // Style dynamically if changed
+      prioritySelect.addEventListener('change', function() {
+        Array.from(this.options).forEach(opt => {
+          opt.classList.remove('priority-normal', 'priority-urgent', 'priority-critical');
+          stylePriorityOption(opt);
+        });
+      });
+    }
   });
 </script>
 

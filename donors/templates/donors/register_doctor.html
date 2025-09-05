@@ -1,0 +1,416 @@
+{% extends 'donors/base.html' %}
+{% block content %}
+
+<div class="row g-4 justify-content-center">
+  <!-- Main Form Column -->
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-lg">
+      <div class="card-header bg-primary text-white py-3">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-user-md fa-2x me-3"></i>
+          <div>
+            <h3 class="mb-0">רישום רופא חדש</h3>
+            <p class="mb-0 mt-1">הרשמה למערכת ניהול תרומות דם</p>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-4">
+        <form method="post">
+          {% csrf_token %}
+
+          <!-- Personal Information Section -->
+          <div class="card mb-4 border-0 shadow-sm hover-effect">
+            <div class="card-header bg-light-primary bg-gradient py-3">
+              <h4 class="mb-0 text-primary">
+                <i class="fas fa-user-circle me-2"></i>מידע אישי
+              </h4>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="{{ form.first_name.id_for_label }}" class="form-label">שם פרטי</label>
+                  {{ form.first_name }}
+                  {% if form.first_name.errors %}
+                    <div class="text-danger small mt-1">{{ form.first_name.errors.0 }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-md-6">
+                  <label for="{{ form.last_name.id_for_label }}" class="form-label">שם משפחה</label>
+                  {{ form.last_name }}
+                  {% if form.last_name.errors %}
+                    <div class="text-danger small mt-1">{{ form.last_name.errors.0 }}</div>
+                  {% endif %}
+                </div>
+                
+                <!-- Username and ID in parallel columns -->
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.username.id_for_label }}" class="form-label">שם משתמש</label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                      <div class="text-danger small mt-1">{{ form.username.errors.0 }}</div>
+                    {% else %}
+                      <small class="form-text text-muted d-block mt-1">עד 150 תווים, רק אותיות, מספרים ו@/./+/-/_</small>
+                    {% endif %}
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.national_id.id_for_label }}" class="form-label">תעודת זהות</label>
+                    {{ form.national_id }}
+                    {% if form.national_id.errors %}
+                      <div class="text-danger small mt-1">{{ form.national_id.errors.0 }}</div>
+                    {% else %}
+                      <small class="form-text text-muted d-block mt-1">9 ספרות ללא מקפים</small>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Contact Information Section -->
+          <div class="card mb-4 border-0 shadow-sm hover-effect">
+            <div class="card-header bg-light-primary bg-gradient py-3">
+              <h4 class="mb-0 text-primary">
+                <i class="fas fa-address-card me-2"></i>פרטי התקשרות
+              </h4>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="{{ form.email.id_for_label }}" class="form-label">אימייל</label>
+                  {{ form.email }}
+                  {% if form.email.errors %}
+                    <div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-md-6">
+                  <label for="{{ form.phone_number.id_for_label }}" class="form-label">טלפון</label>
+                  {{ form.phone_number }}
+                  {% if form.phone_number.errors %}
+                    <div class="text-danger small mt-1">{{ form.phone_number.errors.0 }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Password Section -->
+          <div class="card mb-4 border-0 shadow-sm hover-effect">
+            <div class="card-header bg-light-primary bg-gradient py-3">
+              <h4 class="mb-0 text-primary">
+                <i class="fas fa-lock me-2"></i>סיסמה ואבטחה
+              </h4>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="{{ form.password1.id_for_label }}" class="form-label">סיסמה</label>
+                  {{ form.password1 }}
+                  {% if form.password1.errors %}
+                    <div class="text-danger small mt-1">{{ form.password1.errors.0 }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-md-6">
+                  <label for="{{ form.password2.id_for_label }}" class="form-label">אימות סיסמה</label>
+                  {{ form.password2 }}
+                  {% if form.password2.errors %}
+                    <div class="text-danger small mt-1">{{ form.password2.errors.0 }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="col-12">
+                  <div class="alert alert-info small p-3 mt-3">
+                    <strong><i class="fas fa-info-circle me-2"></i>דרישות סיסמה:</strong>
+                    <ul class="mb-0 mt-2">
+                      <li>לא יכולה להיות דומה למידע אישי שלך.</li>
+                      <li>לפחות 8 תווים.</li>
+                      <li>לא יכולה להיות נפוצה או פשוטה מדי.</li>
+                      <li>לא יכולה להיות כולה מספרים.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <button type="submit" class="btn btn-primary btn-lg w-100 py-3 shadow hover-effect d-flex align-items-center justify-content-center">
+            <i class="fas fa-user-md me-2"></i> <span>רישום רופא</span>
+          </button>
+        </form>
+
+        <!-- Login Link -->
+        <div class="text-center mt-3">
+          <a href="{% url 'login' %}" class="text-decoration-none text-secondary">
+            <i class="fas fa-sign-in-alt me-2"></i>יש לך כבר חשבון? התחבר
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Information Sidebar -->
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-lg sticky-top" style="top: 20px;">
+      <div class="card-header bg-primary text-white py-3">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-stethoscope fa-2x me-3"></i>
+          <h4 class="mb-0">יתרונות רישום כרופא</h4>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="process-step hover-effect">
+          <div class="step-number bg-primary text-white">1</div>
+          <div class="step-content">
+            <h5 class="text-primary"><i class="fas fa-tasks me-2"></i>ניהול תורמים</h5>
+            <p>ניהול מלא של רשימת התורמים ופרטיהם הרפואיים</p>
+          </div>
+        </div>
+
+        <div class="process-step hover-effect mt-3">
+          <div class="step-number bg-primary text-white">2</div>
+          <div class="step-content">
+            <h5 class="text-primary"><i class="fas fa-clipboard-check me-2"></i>אישור תרומות</h5>
+            <p>אשר או דחה תרומות דם על פי הנתונים הרפואיים</p>
+          </div>
+        </div>
+
+        <div class="process-step hover-effect mt-3">
+          <div class="step-number bg-primary text-white">3</div>
+          <div class="step-content">
+            <h5 class="text-primary"><i class="fas fa-chart-line me-2"></i>דוחות וסטטיסטיקות</h5>
+            <p>צפה בדוחות וסטטיסטיקות על תרומות ומצב המלאי</p>
+          </div>
+        </div>
+
+        <div class="process-step hover-effect mt-3">
+          <div class="step-number bg-primary text-white">4</div>
+          <div class="step-content">
+            <h5 class="text-primary"><i class="fas fa-exclamation-circle me-2"></i>ניהול בקשות דחופות</h5>
+            <p>טפל בבקשות דחופות עבור מטופלים בזמן אמת</p>
+          </div>
+        </div>
+
+        <div class="alert alert-info mt-4 shadow-sm">
+          <h6 class="alert-heading"><i class="fas fa-shield-alt me-2"></i>אבטחת מידע</h6>
+          <ul class="mb-0 small">
+            <li><i class="fas fa-database me-2"></i>גישה מוגבלת לנתונים הרפואיים ההכרחיים בלבד</li>
+            <li><i class="fas fa-user-lock me-2"></i>הרשאות מתקדמות לניהול המערכת</li>
+            <li><i class="fas fa-history me-2"></i>יומן פעולות מפורט למעקב אחר שינויים</li>
+          </ul>
+        </div>
+
+        <div class="alert alert-warning mt-3 shadow-sm">
+          <h6 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>מידע חשוב</h6>
+          <ul class="mb-0 small">
+            <li><i class="fas fa-id-card me-2"></i>תעודת זהות נדרשת לאימות זהות הרופא</li>
+            <li><i class="fas fa-certificate me-2"></i>רק רופאים מורשים יכולים להירשם למערכת</li>
+            <li><i class="fas fa-clock me-2"></i>תהליך האימות עשוי לקחת עד 48 שעות</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Global Styles -->
+<style>
+  /* Base & RTL */
+  body {
+    direction: rtl;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  /* Color Scheme for Doctor */
+  .bg-primary { background-color: #0d6efd !important; }
+  .bg-light-primary { background-color: #e8f4ff !important; }
+  .text-primary { color: #0d6efd !important; }
+  .btn-primary { 
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+  }
+  .btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+  }
+
+  /* Hover Effect */
+  .hover-effect {
+    transition: all 0.3s ease;
+    border-radius: 8px;
+  }
+  .hover-effect:hover:not(.alert) {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 20px rgba(13, 110, 253, 0.18) !important;
+  }
+
+  /* Form Inputs */
+  .form-control, .form-select {
+    width: 100%;
+    padding: 0.85rem 1.25rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    background-color: #f8fafc;
+    font-size: 1rem;
+    color: #1a202c;
+    transition: all 0.3s;
+    text-align: right;
+    direction: rtl;
+    height: auto;
+    box-sizing: border-box;
+  }
+
+  .form-control:focus, .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+    background-color: #ffffff;
+    outline: none;
+  }
+
+  .form-control.is-invalid {
+    border-color: #e3342f;
+    background-color: #fff5f5;
+  }
+
+  /* Label Styling */
+  .form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #2d3748;
+    text-align: right;
+    font-size: 0.95rem;
+  }
+
+  /* Form Group Improvements */
+  .form-group {
+    margin-bottom: 1rem;
+  }
+  
+  .form-text.text-muted {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.8rem;
+    color: #6c757d !important;
+  }
+
+  /* Select Arrow Fix */
+  .form-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%230d6efd' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: left 1rem center;
+    background-size: 16px 12px;
+    padding-left: 2.5rem;
+    color: #0d6efd;
+  }
+
+  /* Process Steps */
+  .process-step {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px;
+    background-color: #f8f9fa;
+    border-right: 4px solid #0d6efd;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  }
+
+  .step-number {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    background-color: #0d6efd;
+    color: white;
+    flex-shrink: 0;
+    font-size: 0.9rem;
+  }
+
+  .step-content {
+    flex-grow: 1;
+    text-align: right;
+  }
+
+  .step-content h5 {
+    margin-bottom: 0.4rem;
+    font-size: 1.05rem;
+  }
+
+  .step-content p {
+    margin: 0;
+    color: #4a5568;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+
+  /* Alerts */
+  .alert {
+    border: none;
+    border-right: 4px solid;
+  }
+  .alert-warning { border-color: #ffc107; }
+  .alert-primary { border-color: #0d6efd; }
+  .alert-info { border-color: #17a2b8; }
+
+  /* Checkbox Styling */
+  .form-check {
+    padding-right: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .form-check-input {
+    position: absolute;
+    right: 0;
+    margin-top: 0.3rem;
+  }
+  
+  .form-check-label {
+    cursor: pointer;
+    padding-right: 1.25rem;
+  }
+  
+  .form-text {
+    text-align: right;
+    padding-right: 1.25rem;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .col-lg-8, .col-lg-4 { width: 100%; }
+    .card-body { padding: 1rem; }
+    .form-control, .form-select {
+      padding: 0.75rem 1rem;
+    }
+  }
+</style>
+
+<!-- Display Form Errors at Top -->
+<!-- Display Django messages -->
+{% if messages %}
+<div class="messages">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Display non-field errors -->
+{% if form.non_field_errors %}
+<div class="alert alert-danger">
+    {% for error in form.non_field_errors %}
+    <p class="mb-0">{{ error }}</p>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}

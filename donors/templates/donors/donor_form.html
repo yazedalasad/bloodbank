@@ -1,6 +1,45 @@
 {% extends 'donors/base.html' %}
 {% block content %}
 
+<!-- Display form-level errors -->
+{% if form.non_field_errors %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+  <h5 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>שגיאות בטופס:</h5>
+  <ul class="mb-0">
+    {% for error in form.non_field_errors %}
+    <li>{{ error }}</li>
+    {% endfor %}
+  </ul>
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
+<!-- Display messages -->
+{% if messages %}
+<div class="messages-container">
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    <i class="fas 
+      {% if message.tags == 'success' %}fa-check-circle 
+      {% elif message.tags == 'error' %}fa-exclamation-circle 
+      {% elif message.tags == 'warning' %}fa-exclamation-triangle 
+      {% else %}fa-info-circle{% endif %} 
+      me-2"></i>
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Info Banner for Patients -->
+{% if not is_doctor %}
+<div class="alert alert-info text-center mb-4 shadow-sm">
+  <i class="fas fa-user-shield me-2"></i>
+  <strong>מצב תורם</strong> – שדות אישיים מועתקים מהפרופיל שלך ואינם ניתנים לעריכה.
+</div>
+{% endif %}
+
 <div class="row g-4">
   <!-- Main Form Column -->
   <div class="col-lg-8">
@@ -14,41 +53,122 @@
       <div class="card-body p-4">
         <form method="post" action="{% url 'donor_create' %}">
           {% csrf_token %}
-          
+
           <!-- Personal Information Section -->
           <div class="card mb-4 border-0 shadow-sm hover-effect">
             <div class="card-header bg-light-danger bg-gradient py-3">
               <h4 class="mb-0 text-danger">
-                <i class="fas fa-user-circle me-2"></i>מידע אישי
+                <i class="fas fa-user-circle me-2"></i> מידע אישי
               </h4>
             </div>
             <div class="card-body">
               <div class="row g-3">
+
+                <!-- First Name -->
                 <div class="col-md-6">
                   <div class="form-group">
-                    <label for="{{ form.first_name.id_for_label }}" class="form-label">שם פרטי</label>
-                    {{ form.first_name }}
+                    <label for="id_first_name" class="form-label">שם פרטי</label>
+                    <input
+                      type="text"
+                      name="first_name"
+                      value="{{ form.first_name.value|default_if_none:'' }}"
+                      {% if not is_doctor or form.fields.first_name.widget.attrs.readonly %}readonly{% endif %}
+                      class="form-control {% if form.first_name.errors %}is-invalid{% endif %}"
+                      id="id_first_name"
+                      required
+                    >
+                    {% if form.first_name.errors %}
+                      <div class="text-danger small">{{ form.first_name.errors.as_text }}</div>
+                    {% endif %}
                   </div>
                 </div>
+
+                <!-- Last Name -->
                 <div class="col-md-6">
                   <div class="form-group">
-                    <label for="{{ form.last_name.id_for_label }}" class="form-label">שם משפחה</label>
-                    {{ form.last_name }}
+                    <label for="id_last_name" class="form-label">שם משפחה</label>
+                    <input
+                      type="text"
+                      name="last_name"
+                      value="{{ form.last_name.value|default_if_none:'' }}"
+                      {% if not is_doctor or form.fields.last_name.widget.attrs.readonly %}readonly{% endif %}
+                      class="form-control {% if form.last_name.errors %}is-invalid{% endif %}"
+                      id="id_last_name"
+                      required
+                    >
+                    {% if form.last_name.errors %}
+                      <div class="text-danger small">{{ form.last_name.errors.as_text }}</div>
+                    {% endif %}
                   </div>
                 </div>
-                
+
+                <!-- National ID -->
                 <div class="col-md-6">
                   <div class="form-group">
-                    <label for="{{ form.national_id.id_for_label }}" class="form-label">תעודת זהות</label>
-                    {{ form.national_id }}
+                    <label for="id_national_id" class="form-label">תעודת זהות</label>
+                    <input
+                      type="text"
+                      name="national_id"
+                      value="{{ form.national_id.value|default_if_none:'' }}"
+                      {% if not is_doctor or form.fields.national_id.widget.attrs.readonly %}readonly{% endif %}
+                      class="form-control {% if form.national_id.errors %}is-invalid{% endif %}"
+                      id="id_national_id"
+                      required
+                    >
+                    {% if form.national_id.errors %}
+                      <div class="text-danger small">{{ form.national_id.errors.as_text }}</div>
+                    {% endif %}
                   </div>
                 </div>
+
+                <!-- Phone Number -->
                 <div class="col-md-6">
                   <div class="form-group">
-                    <label for="{{ form.phone_number.id_for_label }}" class="form-label">טלפון</label>
-                    {{ form.phone_number }}
+                    <label for="id_phone_number" class="form-label">טלפון</label>
+                    <input
+                      type="text"
+                      name="phone_number"
+                      value="{{ form.phone_number.value|default_if_none:'' }}"
+                      {% if not is_doctor or form.fields.phone_number.widget.attrs.readonly %}readonly{% endif %}
+                      class="form-control {% if form.phone_number.errors %}is-invalid{% endif %}"
+                      id="id_phone_number"
+                      required
+                    >
+                    {% if form.phone_number.errors %}
+                      <div class="text-danger small">{{ form.phone_number.errors.as_text }}</div>
+                    {% endif %}
                   </div>
                 </div>
+
+                <!-- Email -->
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="id_email" class="form-label">אימייל</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value="{{ form.email.value|default_if_none:'' }}"
+                      {% if not is_doctor or form.fields.email.widget.attrs.readonly %}readonly{% endif %}
+                      class="form-control {% if form.email.errors %}is-invalid{% endif %}"
+                      id="id_email"
+                    >
+                    {% if form.email.errors %}
+                      <div class="text-danger small">{{ form.email.errors.as_text }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <!-- Date of Birth -->
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.date_of_birth.id_for_label }}" class="form-label">תאריך לידה</label>
+                    {{ form.date_of_birth }}
+                    {% if form.date_of_birth.errors %}
+                      <div class="text-danger small">{{ form.date_of_birth.errors.as_text }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
@@ -57,42 +177,116 @@
           <div class="card mb-4 border-0 shadow-sm hover-effect health-section">
             <div class="card-header bg-light-danger bg-gradient py-3">
               <h4 class="mb-0 text-danger">
-                <i class="fas fa-heartbeat me-2"></i>מידע רפואי
+                <i class="fas fa-heartbeat me-2"></i> מידע רפואי
               </h4>
             </div>
             <div class="card-body">
               <div class="row g-3">
+
+                <!-- Blood Type -->
                 <div class="col-md-6">
                   <div class="form-group">
                     <label for="{{ form.blood_type.id_for_label }}" class="form-label">סוג דם</label>
                     {{ form.blood_type }}
+                    {% if form.blood_type.errors %}
+                      <div class="text-danger small">{{ form.blood_type.errors.as_text }}</div>
+                    {% endif %}
                   </div>
                 </div>
+
+                <!-- Health Status -->
                 <div class="col-md-6">
                   <div class="form-group">
-                    <label for="{{ form.date_of_birth.id_for_label }}" class="form-label">תאריך לידה</label>
-                    {{ form.date_of_birth }}
+                    <label for="{{ form.health_status.id_for_label }}" class="form-label">מצב בריאות כללי</label>
+                    {{ form.health_status }}
+                    {% if form.health_status.errors %}
+                      <div class="text-danger small">{{ form.health_status.errors.as_text }}</div>
+                    {% endif %}
                   </div>
                 </div>
-                
+
+                <!-- Smoking Status -->
                 <div class="col-md-6">
                   <div class="form-group">
                     <label class="form-label"><i class="fas fa-smoking me-2"></i>סטטוס עישון</label>
                     {{ form.smoking_status }}
+                    {% if form.smoking_status.errors %}
+                      <div class="text-danger small">{{ form.smoking_status.errors.as_text }}</div>
+                    {% endif %}
                   </div>
                 </div>
+
+                <!-- Alcohol Use -->
                 <div class="col-md-6">
                   <div class="form-group">
                     <label class="form-label"><i class="fas fa-wine-glass-alt me-2"></i>צריכת אלכוהול</label>
                     {{ form.alcohol_use }}
+                    {% if form.alcohol_use.errors %}
+                      <div class="text-danger small">{{ form.alcohol_use.errors.as_text }}</div>
+                    {% endif %}
                   </div>
                 </div>
+
+                <!-- Chronic Illness Checkbox -->
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <div class="form-check">
+                      {{ form.has_chronic_illness }}
+                      <label class="form-check-label" for="{{ form.has_chronic_illness.id_for_label }}">
+                        האם יש לך מחלות כרוניות?
+                      </label>
+                    </div>
+                    {% if form.has_chronic_illness.errors %}
+                      <div class="text-danger small">{{ form.has_chronic_illness.errors.as_text }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <!-- Last Medical Exam -->
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.last_medical_exam.id_for_label }}" class="form-label">תאריך בדיקה רפואית אחרונה</label>
+                    {{ form.last_medical_exam }}
+                    {% if form.last_medical_exam.errors %}
+                      <div class="text-danger small">{{ form.last_medical_exam.errors.as_text }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <!-- Chronic Illness Details (shown only when checkbox is checked) -->
+                <div class="col-12" id="chronic-illness-details" style="display: none;">
+                  <div class="form-group">
+                    <label for="{{ form.chronic_illness_details.id_for_label }}" class="form-label">פרטי מחלות כרוניות</label>
+                    {{ form.chronic_illness_details }}
+                    {% if form.chronic_illness_details.errors %}
+                      <div class="text-danger small">{{ form.chronic_illness_details.errors.as_text }}</div>
+                    {% endif %}
+                    <small class="form-text text-muted">אנא פרט את סוג המחלות, משך הזמן, והטיפול שאתה מקבל</small>
+                  </div>
+                </div>
+
+                <!-- Address -->
+                <div class="col-12">
+                  <div class="form-group">
+                    <label for="{{ form.address.id_for_label }}" class="form-label">כתובת</label>
+                    {{ form.address }}
+                    {% if form.address.errors %}
+                      <div class="text-danger small">{{ form.address.errors.as_text }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
 
           <button type="submit" class="btn btn-danger btn-lg w-100 py-3 shadow hover-effect">
-            <i class="fas fa-save me-2"></i>שמור תורם חדש
+            <i class="fas fa-save me-2"></i>
+            {% if is_doctor %}
+              שמור תורם חדש
+            {% else %}
+              הירשם כמתורם
+            {% endif %}
           </button>
         </form>
       </div>
@@ -116,7 +310,6 @@
             <p>מילוי טופס רפואי ובדיקת תעודה מזהה. נדרשת תעודת זהות או רישיון נהיגה.</p>
           </div>
         </div>
-
         <div class="process-step hover-effect mt-3">
           <div class="step-number bg-danger text-white">2</div>
           <div class="step-content">
@@ -124,7 +317,6 @@
             <p>מדידת חום, דופק, לחץ דם ורמת המוגלובין. הבדיקה אורכת כ-5 דקות.</p>
           </div>
         </div>
-
         <div class="process-step hover-effect mt-3">
           <div class="step-number bg-danger text-white">3</div>
           <div class="step-content">
@@ -132,7 +324,6 @@
             <p>תהליך התרומה אורך כ-10 דקות. נלקחים 450 מ"ל דם באמצעות מחט סטרילית חד פעמית.</p>
           </div>
         </div>
-
         <div class="process-step hover-effect mt-3">
           <div class="step-number bg-danger text-white">4</div>
           <div class="step-content">
@@ -140,7 +331,6 @@
             <p>מנוחה של 10-15 דקות עם כיבוד קל ושתייה. אין לקום בפתאומיות.</p>
           </div>
         </div>
-
         <div class="alert alert-warning mt-4 shadow-sm hover-effect">
           <h5 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>לפני התרומה:</h5>
           <ul class="mb-0">
@@ -150,7 +340,6 @@
             <li><i class="fas fa-smoking-ban me-2"></i>להימנע מעישון שעה לפני ואחרי התרומה</li>
           </ul>
         </div>
-
         <div class="alert alert-success mt-3 shadow-sm hover-effect">
           <h5 class="alert-heading"><i class="fas fa-gift me-2"></i>הטבות לתורמים:</h5>
           <ul class="mb-0">
@@ -164,6 +353,24 @@
   </div>
 </div>
 
+<script>
+  // Show/hide chronic illness details based on checkbox
+  document.addEventListener('DOMContentLoaded', function() {
+    const chronicIllnessCheckbox = document.getElementById('{{ form.has_chronic_illness.id_for_label }}');
+    const chronicIllnessDetails = document.getElementById('chronic-illness-details');
+    
+    // Initial state
+    if (chronicIllnessCheckbox.checked) {
+      chronicIllnessDetails.style.display = 'block';
+    }
+    
+    // Toggle on change
+    chronicIllnessCheckbox.addEventListener('change', function() {
+      chronicIllnessDetails.style.display = this.checked ? 'block' : 'none';
+    });
+  });
+</script>
+
 <style>
   /* ===== Base Styles ===== */
   .hover-effect {
@@ -176,13 +383,11 @@
     box-shadow: 0 10px 20px rgba(230, 57, 70, 0.15) !important;
   }
 
-  /* ===== Unified Form Styling ===== */
   .form-group {
     margin-bottom: 1.5rem;
     position: relative;
   }
 
-  /* Standard label styling (above inputs) */
   .form-label {
     display: block;
     margin-bottom: 0.5rem;
@@ -192,8 +397,7 @@
     font-size: 0.95rem;
   }
 
-  /* Input field styling */
-  .form-control, .form-select {
+  .form-control, .form-select, .form-textarea {
     width: 100%;
     padding: 0.85rem 1.25rem;
     border: 2px solid #e2e8f0;
@@ -207,22 +411,24 @@
     height: auto;
   }
 
-  /* Focus states */
-  .form-control:focus, .form-select:focus {
+  .form-control:read-only {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+  }
+
+  .form-control:focus, .form-select:focus, .form-textarea:focus {
     border-color: #e63946;
     box-shadow: 0 0 0 3px rgba(230, 57, 70, 0.15);
     background-color: #fff;
     outline: none;
   }
 
-  /* Date input specific styling */
   input[type="date"] {
     direction: ltr;
     text-align: right;
     padding-left: 1rem;
   }
 
-  /* Select dropdown styling */
   .form-select {
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
     background-repeat: no-repeat;
@@ -231,7 +437,11 @@
     padding-left: 2.5rem;
   }
 
-  /* Health Section Specific Styling */
+  .form-check-input {
+    margin-left: 0.5rem;
+    margin-right: 0;
+  }
+
   .health-section .form-group {
     margin-bottom: 1.75rem;
   }
@@ -241,7 +451,6 @@
     font-size: 0.95rem;
   }
 
-  /* ===== Card Styling ===== */
   .card {
     border: none;
     border-radius: 12px;
@@ -258,14 +467,12 @@
     padding: 1.5rem;
   }
 
-  /* ===== Process Steps ===== */
   .process-step {
     display: flex;
     align-items: flex-start;
     padding: 15px;
     background-color: #f8f9fa;
     border-right: 4px solid #e63946;
-    border-left: none;
     margin-bottom: 1rem;
   }
 
@@ -277,7 +484,6 @@
     align-items: center;
     justify-content: center;
     margin-left: 15px;
-    margin-right: 0;
     flex-shrink: 0;
     font-weight: bold;
     background-color: #e63946;
@@ -289,25 +495,15 @@
     text-align: right;
   }
 
-  /* ===== Responsive Adjustments ===== */
+  .is-invalid {
+    border-color: #dc3545 !important;
+  }
+
   @media (max-width: 768px) {
-    .form-control, .form-select {
+    .form-control, .form-select, .form-textarea {
       padding: 0.75rem 1rem !important;
     }
   }
 </style>
-
-{% if form.errors %}
-<div class="alert alert-danger">
-    <strong>שגיאות בטופס:</strong>
-    <ul>
-    {% for field, errors in form.errors.items %}
-        {% for error in errors %}
-            <li>{{ field }}: {{ error }}</li>
-        {% endfor %}
-    {% endfor %}
-    </ul>
-</div>
-{% endif %}
 
 {% endblock %}

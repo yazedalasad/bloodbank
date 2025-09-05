@@ -1,12 +1,12 @@
 <!doctype html>
-<html dir="rtl">
+<html dir="rtl" lang="he">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Blood Bank System</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css  " rel="stylesheet">
   <!-- Font Awesome for icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css  ">
   <style>
     :root {
       --primary: #e63946;
@@ -14,29 +14,15 @@
       --accent: #a8dadc;
     }
 
-     /* RTL Support */
-    html[dir="rtl"] body {
-    text-align: right;
-   }
-  
-    html[dir="rtl"] .ms-1 {
-    margin-right: 0.25rem !important;
-    margin-left: 0 !important;
-   }
-  
-    html[dir="rtl"] .me-2 {
-    margin-left: 0.5rem !important;
-    margin-right: 0 !important;
-    }
-    
     body {
       background-color: #f1faee;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      text-align: right;
     }
     
     .logo {
       height: 50px;
-      margin-right: 15px;
+      margin-left: 15px;
     }
     
     .header-title {
@@ -55,7 +41,7 @@
     .nav-link {
       padding: 8px 15px;
       border-radius: 20px;
-      margin-right: 10px;
+      margin-left: 10px;
       font-weight: 500;
       transition: all 0.3s ease;
       text-decoration: none;
@@ -79,6 +65,21 @@
     .nav-link.requests {
       background-color: #cdb4db;
       color: #5e548e;
+    }
+    
+    .nav-link.inventory {
+      background-color: #ffc8dd;
+      color: #ff4d6d;
+    }
+    
+    .nav-link.emergency {
+      background-color: #ffafcc;
+      color: #a4133c;
+    }
+    
+    .nav-link.profile {
+      background-color: #bde0fe;
+      color: #1d3557;
     }
     
     .nav-link:hover {
@@ -106,34 +107,117 @@
       background-color: #5e548e;
       color: white;
     }
+    
+    .nav-link.inventory:hover {
+      background-color: #ff4d6d;
+      color: white;
+    }
+    
+    .nav-link.emergency:hover {
+      background-color: #a4133c;
+      color: white;
+    }
+    
+    .nav-link.profile:hover {
+      background-color: #1d3557;
+      color: white;
+    }
+    
+    .user-welcome {
+      color: var(--secondary);
+      font-weight: 500;
+    }
+    
+    .auth-buttons {
+      margin-right: auto;
+    }
+    
+    @media (max-width: 768px) {
+      .nav-container {
+        flex-direction: column;
+      }
+      
+      .auth-buttons {
+        margin-right: 0;
+        margin-bottom: 1rem;
+      }
+    }
   </style>
 </head>
 <body class="p-4">
   <div class="container">
-    <div class="d-flex align-items-center mb-4">
-      <img src="https://img.icons8.com/color/48/000000/hospital.png" class="logo" alt="Hospital Logo">
-      <h1><a href="/" class="header-title">Blood Bank Management System</a></h1>
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+      <div class="d-flex align-items-center">
+        <img src="https://img.icons8.com/color/48/000000/hospital.png  " class="logo" alt="Hospital Logo">
+        <h1><a href="{% url 'home' %}" class="header-title">מערכת ניהול בנק הדם</a></h1>
+      </div>
+      
+      <div class="auth-buttons">
+        {% if user.is_authenticated %}
+          <span class="user-welcome me-3">שלום, {{ user.first_name }} {{ user.last_name }}</span>
+          <a href="{% url 'profile' %}" class="btn btn-outline-primary btn-sm me-2">
+            <i class="fas fa-user me-1"></i>פרופיל
+          </a>
+          <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm">
+            {% csrf_token %}
+            <i class="fas fa-sign-out-alt me-1"></i>התנתק
+          </a>
+        {% else %}
+          <a href="{% url 'login' %}" class="btn btn-primary btn-sm me-2">
+            <i class="fas fa-sign-in-alt me-1"></i>התחברות
+          </a>
+          <div class="btn-group" role="group">
+            <a href="{% url 'register_doctor' %}" class="btn btn-outline-success btn-sm">הרשמה כרופא</a>
+            <a href="{% url 'register_patient' %}" class="btn btn-outline-info btn-sm">הרשמה כמטופל</a>
+          </div>
+        {% endif %}
+      </div>
     </div>
     
-    <nav class="mb-4 d-flex flex-wrap">
-      <a class="nav-link donors" href="/donors/">
-        <i class="fas fa-users me-2"></i>Donors
-      </a>
-      <a class="nav-link new-donor" href="/donors/new/">
-        <i class="fas fa-user-plus me-2"></i>Add Donor
-      </a>
-      <a class="nav-link donations" href="/donations/new/">
-        <i class="fas fa-tint me-2"></i>Donations
-      </a>
-      <a class="nav-link requests" href="/requests/new/">
-        <i class="fas fa-hand-holding-medical me-2"></i>Requests
-      </a>
+    {% if user.is_authenticated %}
+    <nav class="mb-4 d-flex flex-wrap nav-container">
+      {% if user.profile.role == 'doctor' %}
+        <a class="nav-link donors" href="{% url 'donor_list' %}">
+          <i class="fas fa-users me-2"></i>תורמים
+        </a>
+        <a class="nav-link new-donor" href="{% url 'donor_create' %}">
+          <i class="fas fa-user-plus me-2"></i>הוסף תורם
+        </a>
+        <a class="nav-link donations" href="{% url 'donation_create' %}">
+          <i class="fas fa-tint me-2"></i>תרומות דם
+        </a>
+        <a class="nav-link inventory" href="{% url 'inventory_report' %}">
+          <i class="fas fa-chart-pie me-2"></i>מלאי
+        </a>
+        <a class="nav-link emergency" href="{% url 'emergency_request' %}">
+          <i class="fas fa-ambulance me-2"></i>חירום
+        </a>
+      {% else %}
+        <a class="nav-link requests" href="{% url 'request_blood' %}">
+          <i class="fas fa-hand-holding-medical me-2"></i>בקשת דם
+        </a>
+        <a class="nav-link profile" href="{% url 'patient_dashboard' %}">
+          <i class="fas fa-tachometer-alt me-2"></i>לוח בקרה
+        </a>
+      {% endif %}
     </nav>
+    {% endif %}
+    
+    <!-- Messages display -->
+    {% if messages %}
+      <div class="mb-4">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
     
     {% block content %}{% endblock %}
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js  "></script>
 </body>
-
-</html dir="rtl">
+</html> check and find the error and fix it 

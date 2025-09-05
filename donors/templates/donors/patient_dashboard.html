@@ -1,0 +1,418 @@
+{% extends 'donors/base.html' %}
+{% block content %}
+
+<style>
+  /* Base & RTL */
+  body {
+    direction: rtl;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+  }
+
+  /* Dashboard Cards */
+  .dashboard-card {
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: none;
+    overflow: hidden;
+    background: white;
+  }
+
+  .card-header {
+    padding: 1rem 1.25rem;
+    border-bottom: none;
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+    color: white;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card-body {
+    padding: 1.5rem;
+  }
+
+  /* Stat Summary Cards */
+  .summary-card {
+    border-left: 5px solid #28a745;
+  }
+
+  .summary-card .card-body {
+    padding: 1rem;
+  }
+
+  .summary-card .card-title {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    color: #495057;
+  }
+
+  .summary-card .display-4 {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #28a745;
+  }
+
+  .summary-card .text-muted {
+    font-size: 0.9rem;
+  }
+
+  /* Progress Bars */
+  .progress {
+    height: 25px;
+    border-radius: 12px;
+    background-color: #e9ecef;
+    overflow: hidden;
+  }
+
+  .progress-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: white;
+    transition: width 0.4s ease;
+  }
+
+  .progress-bar.adequate {
+    background-color: #28a745;
+  }
+
+  .progress-bar.low {
+    background-color: #ffc107;
+    color: #212529;
+  }
+
+  .progress-bar.critical {
+    background-color: #dc3545;
+  }
+
+  /* Badges */
+  .blood-type-badge {
+    font-size: 1rem;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-weight: bold;
+  }
+
+  .status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: bold;
+  }
+
+  .status-fulfilled {
+    background-color: #28a745;
+    color: white;
+  }
+
+  .status-pending {
+    background-color: #17a2b8;
+    color: white;
+  }
+
+  .status-critical {
+    background-color: #dc3545;
+    color: white;
+  }
+
+  /* Donor Status Tag */
+  .donor-tag {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    display: inline-block;
+    margin-top: 5px;
+  }
+
+  /* Register Button Styling */
+  .register-donor-btn {
+    background: linear-gradient(135deg, #e63946, #c1121f);
+    color: white;
+    border: none;
+    font-weight: bold;
+    transition: all 0.3s ease;
+  }
+
+  .register-donor-btn:hover {
+    background: linear-gradient(135deg, #c1121f, #a00a14);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(220, 53, 69, 0.3);
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .card-header {
+      font-size: 1.1rem;
+    }
+    .summary-card .display-4 {
+      font-size: 2rem;
+    }
+    .table-responsive {
+      font-size: 0.95rem;
+    }
+    .register-donor-btn {
+      width: 100%;
+    }
+  }
+</style>
+
+<div class="container-fluid py-4">
+  <!-- Welcome & Role Info -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="text-center mb-4">
+        <h1 class="text-success">
+          <i class="fas fa-user-circle me-2"></i>
+          שלום, {{ user.first_name }} {{ user.last_name }}
+        </h1>
+        <p class="lead text-muted">מרכז האישי שלך - תורם ומטופל</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Stats -->
+  <div class="row mb-4">
+    <!-- Total Donations -->
+    <div class="col-md-4">
+      <div class="card summary-card">
+        <div class="card-body text-center">
+          <h5 class="card-title">
+            <i class="fas fa-tint me-2"></i>תרומות שביצעת
+          </h5>
+          <div class="display-4">{{ total_donations }}</div>
+          <p class="text-muted mb-0">יחידות דם תרםת עד היום</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Next Donation Date -->
+    <div class="col-md-4">
+      <div class="card summary-card">
+        <div class="card-body text-center">
+          <h5 class="card-title">
+            <i class="fas fa-calendar-check me-2"></i>מותר לתרום שוב
+          </h5>
+          {% if next_donation_date %}
+            <div class="display-4">{{ next_donation_date|date:"d/m/Y" }}</div>
+            <p class="text-muted mb-0">בנימוק: 56 ימים מתרומה אחרונה</p>
+          {% else %}
+            <div class="display-4">מיידי</div>
+            <p class="text-muted mb-0">ניתן לתרום עכשיו</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Blood Type -->
+    <div class="col-md-4">
+      <div class="card summary-card">
+        <div class="card-body text-center">
+          <h5 class="card-title">
+            <i class="fas fa-address-card me-2"></i>סוג הדם שלך
+          </h5>
+          {% if is_donor and donor.blood_type %}
+            <span class="blood-type-badge bg-danger text-white">{{ donor.blood_type }}</span>
+            <p class="text-muted mb-0 mt-2">ניתן לתרום לכל סוגי הדם המקבלים</p>
+          {% else %}
+            <span class="blood-type-badge bg-secondary text-white">לא ידוע</span>
+            <p class="text-muted mb-0 mt-2">הירשם כמתורם כדי לעדכן</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Donor Status or Registration CTA -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card dashboard-card">
+        <div class="card-header">
+          <i class="fas fa-user-tag"></i> סטטוס תורם
+        </div>
+        <div class="card-body">
+          {% if is_donor %}
+            <!-- Already a donor -->
+            <div class="row align-items-center">
+              <div class="col-md-8">
+                <h5>תורם פעיל</h5>
+                <p class="mb-1">הנך רשום גם כמתרום דם. תודה על התרומה!</p>
+                <span class="donor-tag">
+                  <i class="fas fa-heart me-1"></i>
+                  תורם מאז {{ donor.created_at|date:"d/m/Y" }}
+                </span>
+              </div>
+              <div class="col-md-4 text-center">
+                <i class="fas fa-hand-holding-heart fa-3x text-success"></i>
+              </div>
+            </div>
+          {% else %}
+            <!-- Not a donor: Show Register Button -->
+            <div class="text-center py-4">
+              <i class="fas fa-tint fa-3x text-danger mb-3"></i>
+              <h5>עדיין לא תורם?</h5>
+              <p class="text-muted mb-3">
+                כל תרומה יכולה להציל עד 3 חיים.<br>
+                הצטרף עכשיו ותרום למשמעת החסד.
+              </p>
+              <a href="{% url 'donor_create' %}" class="btn register-donor-btn btn-lg px-5 py-3 shadow-lg">
+                <i class="fas fa-plus-circle me-2"></i>
+                הירשם כמתורם עכשיו
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Donation Progress (Only if donor) -->
+  {% if is_donor %}
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card dashboard-card">
+        <div class="card-header">
+          <i class="fas fa-chart-line"></i> התקדמות לתרומה הבאה
+        </div>
+        <div class="card-body">
+          {% if days_until_next > 0 %}
+            <p><strong>זמן שנותר עד תרומה הבאה:</strong> {{ days_until_next }} ימים</p>
+            <div class="progress">
+              <div class="progress-bar adequate" role="progressbar"
+                  style="width: {{ donation_progress_percentage }}%;">
+                {{ donation_progress_percentage }}% ({{ days_until_next }}/56 ימים)
+              </div>
+            </div>
+            <small class="text-muted mt-2">תרומה אחרונה: {{ last_donation.donation_date|date:"d/m/Y" }}</small>
+          {% else %}
+            <p class="text-success">
+              <strong>✅ ניתן לתרום עכשיו!</strong>
+            </p>
+            <a href="{% url 'donation_create' %}" class="btn btn-outline-danger btn-sm">
+              <i class="fas fa-tint me-1"></i> תרם עכשיו
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Recent Blood Requests -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card dashboard-card">
+        <div class="card-header">
+          <i class="fas fa-list"></i> בקשות ששלחת
+        </div>
+        <div class="card-body">
+          {% if user_requests %}
+            <div class="table-responsive">
+              <table class="table table-hover align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th>מטופל</th>
+                    <th>סוג דם</th>
+                    <th>כמות</th>
+                    <th>עדיפות</th>
+                    <th>סטטוס</th>
+                    <th>תאריך</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for req in user_requests %}
+                  <tr>
+                    <td>{{ req.patient_name }}</td>
+                    <td><span class="blood-type-badge bg-danger">{{ req.blood_type_needed }}</span></td>
+                    <td>{{ req.units_needed }} יחידות</td>
+                    <td>
+                      <span class="
+                        status-badge
+                        {% if req.priority == 'critical' %}status-critical
+                        {% elif req.priority == 'urgent' %}status-pending
+                        {% else %}status-normal{% endif %}
+                      ">
+                        {% if req.priority == 'critical' %}קריטית
+                        {% elif req.priority == 'urgent' %}דחוף
+                        {% else %}רגילה{% endif %}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="status-badge {% if req.fulfilled %}status-fulfilled{% else %}status-pending{% endif %}">
+                        {% if req.fulfilled %}מושלם{% else %}בהמתנה{% endif %}
+                      </span>
+                    </td>
+                    <td>{{ req.date_requested|date:"d/m/Y" }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="text-center py-4">
+              <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+              <h5 class="text-muted">עדיין לא שלחת בקשות לדם</h5>
+              <p class="text-muted">כשתיצור בקשה חדשה, היא תוצג כאן</p>
+              <a href="{% url 'request_blood' %}" class="btn btn-outline-danger">
+                <i class="fas fa-plus me-1"></i> צור בקשה חדשה
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="card dashboard-card">
+        <div class="card-header">
+          <i class="fas fa-bolt"></i> פעולות מהירות
+        </div>
+        <div class="card-body">
+          <div class="row text-center">
+            <div class="col-md-4 mb-3">
+              <a href="{% url 'request_blood' %}" class="btn btn-outline-danger btn-lg w-100">
+                <i class="fas fa-tint me-2"></i>בקש דם
+              </a>
+            </div>
+            {% if not is_donor %}
+            <div class="col-md-4 mb-3">
+              <a href="{% url 'donor_create' %}" class="btn btn-outline-primary btn-lg w-100">
+                <i class="fas fa-user-plus me-2"></i>הירשם כתורם
+              </a>
+            </div>
+            {% else %}
+            <div class="col-md-4 mb-3">
+              <a href="{% url 'donation_create' %}" class="btn btn-outline-success btn-lg w-100">
+                <i class="fas fa-hand-holding-heart me-2"></i>תרום דם
+              </a>
+            </div>
+            {% endif %}
+            <div class="col-md-4 mb-3">
+              <a href="{% url 'profile' %}" class="btn btn-outline-info btn-lg w-100">
+                <i class="fas fa-cog me-2"></i>הגדרות
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="text-center mt-4 text-muted">
+    <small>
+      <i class="fas fa-sync-alt me-1"></i>
+      עודכן לאחרונה: {% now "d/m/Y H:i" %}
+    </small>
+  </div>
+</div>
+
+{% endblock %}

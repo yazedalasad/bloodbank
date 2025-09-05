@@ -1,0 +1,284 @@
+{% extends 'donors/base.html' %}
+{% block content %}
+
+<style>
+.profile-container {
+    max-width: 800px;
+    margin: 2rem auto;
+}
+
+.profile-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.profile-header {
+    background: linear-gradient(135deg, #e63946 0%, #c1121f 100%);
+    color: white;
+    padding: 2rem;
+    text-align: center;
+}
+
+.profile-avatar {
+    width: 100px;
+    height: 100px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    color: #e63946;
+    font-size: 2.5rem;
+}
+
+.profile-body {
+    padding: 2rem;
+}
+
+.info-group {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border-left: 4px solid #e63946;
+}
+
+.info-label {
+    font-weight: bold;
+    color: #457b9d;
+    margin-bottom: 0.5rem;
+}
+
+.info-value {
+    font-size: 1.1rem;
+    color: #2b2d42;
+}
+
+.edit-btn {
+    background: linear-gradient(135deg, #457b9d 0%, #1d3557 100%);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.edit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(69, 123, 157, 0.4);
+}
+
+.role-badge {
+    background: #a8dadc;
+    color: #1d3557;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.stat-item {
+    background: white;
+    padding: 1rem;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    border: 2px solid #f1faee;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #e63946;
+}
+
+.stat-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.emergency-contact {
+    background: linear-gradient(135deg, #ffdd00 0%, #ffaa00 100%);
+    color: #000;
+    padding: 1rem;
+    border-radius: 10px;
+    margin-top: 2rem;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.contact-icon {
+    width: 30px;
+    height: 30px;
+    background: #000;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 10px;
+    color: #ffdd00;
+    font-size: 0.8rem;
+}
+</style>
+
+<div class="profile-container">
+    <div class="profile-card">
+        <!-- Header Section -->
+        <div class="profile-header">
+            <div class="profile-avatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <h2 class="mt-3">{{ user.get_full_name }}</h2>
+            <div class="role-badge">
+                {% if user.profile.role == 'doctor' %}
+                    <i class="fas fa-user-md me-2"></i>רופא
+                {% else %}
+                    <i class="fas fa-user me-2"></i>מטופל
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Body Section -->
+        <div class="profile-body">
+            <!-- Personal Information -->
+            <div class="info-group">
+                <h4><i class="fas fa-user-circle me-2"></i>מידע אישי</h4>
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <div class="info-label">שם מלא</div>
+                        <div class="info-value">{{ user.get_full_name }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-label">תפקיד</div>
+                        <div class="info-value">
+                            {% if user.profile.role == 'doctor' %}
+                                רופא - ניהול מערכת
+                            {% else %}
+                                מטופל - בקשות דם
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="info-group">
+                <h4><i class="fas fa-address-card me-2"></i>פרטי התקשרות</h4>
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <div class="info-label">אימייל</div>
+                        <div class="info-value">{{ user.email }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-label">טלפון</div>
+                        <div class="info-value">{{ user.profile.phone_number }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account Information -->
+            <div class="info-group">
+                <h4><i class="fas fa-shield-alt me-2"></i>פרטי חשבון</h4>
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <div class="info-label">שם משתמש</div>
+                        <div class="info-value">{{ user.username }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-label">תאריך הצטרפות</div>
+                        <div class="info-value">{{ user.date_joined|date:"d/m/Y" }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            {% if user.profile.role == 'doctor' %}
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number">0</div>
+                    <div class="stat-label">תורמים</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">0</div>
+                    <div class="stat-label">תרומות</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">0</div>
+                    <div class="stat-label">בקשות</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">0</div>
+                    <div class="stat-label">מקרי חירום</div>
+                </div>
+            </div>
+            {% else %}
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number">0</div>
+                    <div class="stat-label">בקשות דם</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">0</div>
+                    <div class="stat-label">תרומות נתרמו</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">0</div>
+                    <div class="stat-label">בקשות מאושרות</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">0</div>
+                    <div class="stat-label">מקרי חירום</div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Emergency Contact -->
+            <div class="emergency-contact">
+                <h5><i class="fas fa-exclamation-triangle me-2"></i>אנשי קשר לחירום</h5>
+                <div class="contact-item">
+                    <div class="contact-icon">
+                        <i class="fas fa-phone"></i>
+                    </div>
+                    <span>מוקד חירום: <strong>03-1234567</strong></span>
+                </div>
+                <div class="contact-item">
+                    <div class="contact-icon">
+                        <i class="fas fa-user-md"></i>
+                    </div>
+                    <span>ד"ר לוי: <strong>050-1234567</strong></span>
+                </div>
+                <div class="contact-item">
+                    <div class="contact-icon">
+                        <i class="fas fa-ambulance"></i>
+                    </div>
+                    <span>חדר מיון: <strong>*5555</strong></span>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="text-center mt-4">
+                <a href="#" class="btn edit-btn me-3">
+                    <i class="fas fa-edit me-2"></i>ערוך פרטים
+                </a>
+                <a href="{% url 'logout' %}" class="btn btn-outline-danger">
+                    <i class="fas fa-sign-out-alt me-2"></i>התנתק
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
