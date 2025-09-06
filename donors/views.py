@@ -758,5 +758,147 @@ from django.views.decorators.http import require_http_methods
 
 @require_http_methods(["GET", "POST"])  # Allow both GET and POST
 def custom_logout(request):
+
     logout(request)
     return redirect('home')  # Or login, or wherever you want
+
+
+
+# views/reports.py
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.http import HttpResponse
+from django.utils import timezone
+from datetime import datetime
+import os
+
+from .models import Donor, Donation, BloodRequest, Profile
+from .utils.pdf_generator import generate_pdf, save_pdf_to_file
+from .utils.email_service import send_email_with_attachment
+
+@login_required
+def generate_doctor_report(request):
+    """Generate and email comprehensive report for doctors"""
+    if not hasattr(request.user, 'profile') or not request.user.profile.is_doctor:
+        return HttpResponse("Access denied. Doctor role required.", status=403)
+    
+    # Get all data
+    donors = Donor.objects.all()
+    donations = Donation.objects.all().select_related('donor')
+    blood_requests = BloodRequest.objects.all().select_related('requested_by')
+    
+    context = {
+        'doctor_name': request.user.get_full_name() or request.user.username,
+        'report_date': timezone.now(),
+        'donors': donors,
+        'donations': donations,
+        'blood_requests': blood_requests,
+        'total_donors': donors.count(),
+        'total_donations': donations.count(),
+        'total_requests': blood_requests.count(),
+    }
+    
+    # Generate PDF
+    pdf_content = generate_pdf('donors/reports/doctor_report.html', context)
+    
+    if pdf_content:
+        # Save PDF to file
+        filename = f"doctor_report_{request.user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        filepath = save_pdf_to_file(pdf_content, filename)
+        
+        # Email the report
+        subject = f"Blood Bank System - Comprehensive Report - {datetime.now().strftime('%Y-%m-%d')}"
+        message = f"Dear Dr. {request.user.get_full_name() or request.user.username},\n\n"
+        message += "Please find attached the comprehensive report of all records in the blood bank system.\n\n"
+        message += "Best regards,\nBlood Bank System"
+        
+        try:
+            send_email_with_attachment(
+                subject, 
+                message, 
+                [request.user.email],
+                filepath
+            )
+            email_sent = True
+        except Exception as e:
+            email_sent = False
+        
+        # Provide download link
+        response = HttpResponse(pdf_content, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        # Add success message
+        from django.contrib import messages
+        if email_sent:
+            messages.success(request, "Report generated successfully and sent to your email!")
+        else:
+            messages.warning(request, "Report generated successfully but email could not be sent.")
+        
+        return response
+    
+    return HttpResponse("Failed to generate report.", status=500)
+
+@login_required
+def generate_patient_report(request):
+    """Generate and email personal report for patients"""
+    if not hasattr(request.user, 'profile') or not request.user.profile.is_patient:
+        return HttpResponse("Access denied. Patient role required.", status=403)
+    
+    try:
+        # Get patient's data
+        donor = Donor.objects.get(user=request.user)
+        donations = Donation.objects.filter(donor=donor)
+        blood_requests = BloodRequest.objects.filter(requested_by=request.user)
+        
+        context = {
+            'patient_name': f"{donor.first_name} {donor.last_name}",
+            'report_date': timezone.now(),
+            'donor': donor,
+            'donations': donations,
+            'blood_requests': blood_requests,
+            'total_donations': donations.count(),
+            'total_requests': blood_requests.count(),
+        }
+        
+        # Generate PDF
+        pdf_content = generate_pdf('donors/reports/patient_report.html', context)
+        
+        if pdf_content:
+            # Save PDF to file
+            filename = f"patient_report_{request.user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+            filepath = save_pdf_to_file(pdf_content, filename)
+            
+            # Email the report
+            recipient_email = donor.email or request.user.email
+            subject = f"Your Blood Bank Records - {datetime.now().strftime('%Y-%m-%d')}"
+            message = f"Dear {donor.first_name} {donor.last_name},\n\n"
+            message += "Please find attached your personal blood bank records.\n\n"
+            message += "Best regards,\nBlood Bank System"
+            
+            try:
+                send_email_with_attachment(
+                    subject, 
+                    message, 
+                    [recipient_email],
+                    filepath
+                )
+                email_sent = True
+            except Exception as e:
+                email_sent = False
+            
+            # Provide download link
+            response = HttpResponse(pdf_content, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            
+            # Add success message
+            from django.contrib import messages
+            if email_sent:
+                messages.success(request, "Report generated successfully and sent to your email!")
+            else:
+                messages.warning(request, "Report generated successfully but email could not be sent.")
+            
+            return response
+        
+        return HttpResponse("Failed to generate report.", status=500)
+    
+    except Donor.DoesNotExist:
+        return HttpResponse("No donor record found for your account.", status=404)

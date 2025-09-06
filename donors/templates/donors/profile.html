@@ -1,4 +1,5 @@
 {% extends 'donors/base.html' %}
+{% load humanize %}
 {% block content %}
 
 <style>
@@ -71,6 +72,20 @@
     box-shadow: 0 5px 15px rgba(69, 123, 157, 0.4);
 }
 
+.report-btn {
+    background: linear-gradient(135deg, #2a9d8f 0%, #264653 100%);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.report-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(42, 157, 143, 0.4);
+}
+
 .role-badge {
     background: #a8dadc;
     color: #1d3557;
@@ -131,6 +146,33 @@
     margin-left: 10px;
     color: #ffdd00;
     font-size: 0.8rem;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin: 2rem 0;
+    flex-wrap: wrap;
+}
+
+.report-section {
+    background: linear-gradient(135deg, #f1faee 0%, #a8dadc 100%);
+    padding: 1.5rem;
+    border-radius: 10px;
+    margin: 2rem 0;
+    border-left: 4px solid #2a9d8f;
+}
+
+.report-section h5 {
+    color: #264653;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+}
+
+.report-section h5 i {
+    margin-left: 10px;
 }
 </style>
 
@@ -208,42 +250,70 @@
             {% if user.profile.role == 'doctor' %}
             <div class="stats-grid">
                 <div class="stat-item">
-                    <div class="stat-number">0</div>
+                    <div class="stat-number">{{ total_donors|default:0 }}</div>
                     <div class="stat-label">תורמים</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number">0</div>
+                    <div class="stat-number">{{ total_donations|default:0 }}</div>
                     <div class="stat-label">תרומות</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number">0</div>
+                    <div class="stat-number">{{ total_requests|default:0 }}</div>
                     <div class="stat-label">בקשות</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number">0</div>
+                    <div class="stat-number">{{ emergency_requests|default:0 }}</div>
                     <div class="stat-label">מקרי חירום</div>
                 </div>
             </div>
             {% else %}
             <div class="stats-grid">
                 <div class="stat-item">
-                    <div class="stat-number">0</div>
+                    <div class="stat-number">{{ my_requests|default:0 }}</div>
                     <div class="stat-label">בקשות דם</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number">0</div>
+                    <div class="stat-number">{{ my_donations|default:0 }}</div>
                     <div class="stat-label">תרומות נתרמו</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number">0</div>
+                    <div class="stat-number">{{ approved_requests|default:0 }}</div>
                     <div class="stat-label">בקשות מאושרות</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number">0</div>
+                    <div class="stat-number">{{ emergency_requests|default:0 }}</div>
                     <div class="stat-label">מקרי חירום</div>
                 </div>
             </div>
             {% endif %}
+
+            <!-- Report Section -->
+            <div class="report-section">
+                <h5><i class="fas fa-file-pdf"></i> דוחות ונתונים</h5>
+                <p class="text-muted">
+                    {% if user.profile.role == 'doctor' %}
+                    צפה בדוח מלא של כל הנתונים במערכת, כולל תורמים, תרומות ובקשות.
+                    {% else %}
+                    צפה בדוח אישי עם כל הנתונים וההיסטוריה הרפואית שלך.
+                    {% endif %}
+                </p>
+                
+                <div class="action-buttons">
+                    {% if user.profile.role == 'doctor' %}
+                    <a href="{% url 'doctor_report' %}" class="btn report-btn">
+                        <i class="fas fa-file-medical me-2"></i>דוח מערכת מלא
+                    </a>
+                    {% else %}
+                    <a href="{% url 'patient_report' %}" class="btn report-btn">
+                        <i class="fas fa-file-medical me-2"></i>דוח אישי
+                    </a>
+                    {% endif %}
+                    
+                    <a href="#" class="btn edit-btn">
+                        <i class="fas fa-history me-2"></i>היסטוריה
+                    </a>
+                </div>
+            </div>
 
             <!-- Emergency Contact -->
             <div class="emergency-contact">

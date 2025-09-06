@@ -632,3 +632,45 @@ class BloodRequest(models.Model):
         super().save(*args, **kwargs)
 
 
+# models.py (add this new model at the end)
+class UserReport(models.Model):
+    """Model to store user PDF reports without modifying Profile"""
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='reports',
+        verbose_name=_("User")
+    )
+    
+    report_type = models.CharField(
+        max_length=20,
+        choices=[('doctor', _('Doctor Report')), ('patient', _('Patient Report'))],
+        verbose_name=_("Report Type")
+    )
+    
+    generated_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Generated At")
+    )
+    
+    pdf_file = models.FileField(
+        upload_to='user_reports/%Y/%m/%d/',
+        verbose_name=_("PDF File")
+    )
+    
+    email_sent = models.BooleanField(
+        default=False,
+        verbose_name=_("Email Sent")
+    )
+    
+    class Meta:
+        verbose_name = _("User Report")
+        verbose_name_plural = _("User Reports")
+        ordering = ['-generated_at']
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.get_report_type_display()} - {self.generated_at}"
+    
+    def get_download_url(self):
+        """Get download URL for the PDF"""
+        return self.pdf_file.url if self.pdf_file else None

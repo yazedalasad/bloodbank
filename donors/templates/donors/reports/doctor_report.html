@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Blood Bank System - Comprehensive Report</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+        
+        body { 
+            font-family: 'Roboto', sans-serif; 
+            margin: 0;
+            padding: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 20px;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            font-size: 32px;
+            margin: 0;
+            font-weight: 700;
+        }
+        
+        h2 {
+            color: #34495e;
+            margin-top: 40px;
+            font-size: 24px;
+            border-left: 4px solid #667eea;
+            padding-left: 15px;
+        }
+        
+        .summary-cards {
+            display: flex;
+            justify-content: space-between;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .summary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            flex: 1;
+            margin: 10px;
+            min-width: 200px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .summary-card h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 500;
+            opacity: 0.9;
+        }
+        
+        .summary-card .number {
+            font-size: 32px;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 500;
+        }
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .badge-approved {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .badge-pending {
+            background: #FF9800;
+            color: white;
+        }
+        
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 12px;
+            color: #7f8c8d;
+            border-top: 1px solid #e0e0e0;
+            padding-top: 20px;
+        }
+        
+        .report-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .report-info p {
+            margin: 5px 0;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .status-completed { background: #4CAF50; }
+        .status-pending { background: #FF9800; }
+        .status-critical { background: #F44336; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Blood Bank System - Comprehensive Report</h1>
+            <div class="report-info">
+                <p><strong>Generated for:</strong> Dr. {{ doctor_name }}</p>
+                <p><strong>Report Date:</strong> {{ report_date|date:"F j, Y, H:i" }}</p>
+                <p><strong>Report ID:</strong> DR{{ report_date|date:"YmdHis" }}</p>
+            </div>
+        </div>
+        
+        <div class="summary-cards">
+            <div class="summary-card">
+                <h3>TOTAL DONORS</h3>
+                <div class="number">{{ total_donors }}</div>
+            </div>
+            <div class="summary-card">
+                <h3>TOTAL DONATIONS</h3>
+                <div class="number">{{ total_donations }}</div>
+            </div>
+            <div class="summary-card">
+                <h3>BLOOD REQUESTS</h3>
+                <div class="number">{{ total_requests }}</div>
+            </div>
+        </div>
+        
+        <h2>All Donors</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>ID</th>
+                    <th>Blood Type</th>
+                    <th>Phone</th>
+                    <th>Email</th>
+                    <th>Health Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for donor in donors %}
+                <tr>
+                    <td>{{ donor.first_name }} {{ donor.last_name }}</td>
+                    <td>{{ donor.national_id }}</td>
+                    <td><strong>{{ donor.blood_type }}</strong></td>
+                    <td>{{ donor.phone_number }}</td>
+                    <td>{{ donor.email|default:"N/A" }}</td>
+                    <td>{{ donor.get_health_status_display }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <h2>All Donations</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Donor</th>
+                    <th>Date</th>
+                    <th>Volume</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for donation in donations %}
+                <tr>
+                    <td>{{ donation.donor.first_name }} {{ donation.donor.last_name }}</td>
+                    <td>{{ donation.donation_date|date:"M d, Y" }}</td>
+                    <td>{{ donation.volume_ml }} ml</td>
+                    <td>
+                        <span class="badge {% if donation.is_approved %}badge-approved{% else %}badge-pending{% endif %}">
+                            {{ donation.is_approved|yesno:"Approved,Pending" }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <h2>All Blood Requests</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Patient</th>
+                    <th>Blood Type</th>
+                    <th>Units</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Requested By</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for request in blood_requests %}
+                <tr>
+                    <td>{{ request.patient_name }}</td>
+                    <td><strong>{{ request.blood_type_needed }}</strong></td>
+                    <td>{{ request.units_needed }}</td>
+                    <td>
+                        {% if request.priority == 'critical' %}
+                        <span class="status-indicator status-critical"></span>
+                        {% elif request.priority == 'urgent' %}
+                        <span class="status-indicator status-pending"></span>
+                        {% else %}
+                        <span class="status-indicator status-completed"></span>
+                        {% endif %}
+                        {{ request.get_priority_display }}
+                    </td>
+                    <td>{{ request.status }}</td>
+                    <td>{{ request.requested_by.get_full_name|default:request.requested_by.username }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <div class="footer">
+            <p>This report was automatically generated by the Blood Bank System on {{ report_date|date:"F j, Y" }}</p>
+            <p>Confidential - For authorized medical personnel only</p>
+        </div>
+    </div>
+</body>
+</html>
