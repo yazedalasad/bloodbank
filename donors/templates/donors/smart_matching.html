@@ -1,0 +1,177 @@
+{% extends 'donors/base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-users me-2"></i>התאמה חכמה של תורמים
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- Search Form -->
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <form method="get" class="row g-3">
+                                <div class="col-md-5">
+                                    <label for="blood_type" class="form-label">סוג דם נדרש</label>
+                                    <select name="blood_type" id="blood_type" class="form-select">
+                                        <option value="">בחר סוג דם...</option>
+                                        {% for blood_type, name in blood_types %}
+                                            <option value="{{ blood_type }}" {% if blood_type == blood_type %}selected{% endif %}>
+                                                {{ name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="units_needed" class="form-label">יחידות נדרשות</label>
+                                    <input type="number" name="units_needed" id="units_needed" class="form-control" 
+                                           value="{{ units_needed }}" min="1" max="10">
+                                </div>
+                                <div class="col-md-3 d-flex align-items-end">
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="fas fa-search me-1"></i>חפש התאמות
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">תוצאות חיפוש</h5>
+                                    <p class="card-text">
+                                        נמצאו <strong>{{ total_matches }}</strong> תורמים מתאימים
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if matched_donors %}
+                    <!-- Results Table -->
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>דירוג</th>
+                                    <th>תורם</th>
+                                    <th>סוג דם</th>
+                                    <th>מרחק (ק"מ)</th>
+                                    <th>זמינות</th>
+                                    <th>מצב בריאות</th>
+                                    <th>ניסיון תרומות</th>
+                                    <th>טלפון</th>
+                                    <th>פעולות</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for match in matched_donors %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-{% if match.match_score > 80 %}success{% elif match.match_score > 60 %}warning{% else %}secondary{% endif %}">
+                                            {{ match.match_score }}/100
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <strong>{{ match.donor.first_name }} {{ match.donor.last_name }}</strong>
+                                        <br><small class="text-muted">ת"ז: {{ match.donor.national_id }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-danger">{{ match.donor.blood_type }}</span>
+                                    </td>
+                                    <td>{{ match.distance }}</td>
+                                    <td>
+                                        {% if match.can_donate_now %}
+                                            <span class="badge bg-success">זמין מיידי</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">בעוד {{ match.donor.days_until_next_donation }} ימים</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if match.health_status == 'excellent' %}success{% elif match.health_status == 'good' %}info{% else %}warning{% endif %}">
+                                            {{ match.donor.get_health_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {{ match.donor.donations.count }} תרומות
+                                    </td>
+                                    <td>{{ match.donor.phone_number }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary contact-btn" 
+                                                    data-phone="{{ match.donor.phone_number }}"
+                                                    data-email="{{ match.donor.email|default:'לא צוין' }}">
+                                                <i class="fas fa-phone"></i>
+                                            </button>
+                                            {% if match.can_donate_now %}
+                                            <a href="{% url 'donation_create' %}" class="btn btn-outline-success">
+                                                <i class="fas fa-tint"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Compatibility Info -->
+                    <div class="mt-4 p-3 bg-light rounded">
+                        <h6>סוגי דם תואמים ל-{{ blood_type }}:</h6>
+                        {% for blood_type in compatible_types %}
+                            <span class="badge bg-info me-1">{{ blood_type }}</span>
+                        {% endfor %}
+                    </div>
+
+                    {% else %}
+                    <!-- No Results Message -->
+                    <div class="text-center py-5">
+                        <i class="fas fa-search fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">לא נמצאו תורמים מתאימים</h4>
+                        <p class="text-muted">נסה לשנות את פרטי החיפוש או לוודא שיש תורמים זמינים</p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Matching Algorithm Info -->
+                    <div class="mt-4 p-3 bg-light rounded">
+                        <h6><i class="fas fa-info-circle me-2"></i>איך עובד האלגוריתם?</h6>
+                        <p class="mb-2">המערכת מדרגת תורמים לפי:</p>
+                        <ul class="mb-0">
+                            <li><strong>התאמת סוג דם מדויקת</strong> (30 נקודות)</li>
+                            <li><strong>זמינות מיידית</strong> (40 נקודות)</li>
+                            <li><strong>מצב בריאותי מעולה</strong> (25 נקודות)</li>
+                            <li><strong>קרבה גיאוגרפית</strong> (10-20 נקודות)</li>
+                            <li><strong>ניסיון תרומה</strong> (5-15 נקודות)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Contact button functionality
+    const contactButtons = document.querySelectorAll('.contact-btn');
+    contactButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const phone = this.getAttribute('data-phone');
+            const email = this.getAttribute('data-email');
+            alert('טלפון: ' + phone + '\nאימייל: ' + email);
+        });
+    });
+
+    // Auto-submit when blood type changes (optional)
+    const bloodTypeSelect = document.getElementById('blood_type');
+    bloodTypeSelect.addEventListener('change', function() {
+        if (this.value) {
+            this.form.submit();
+        }
+    });
+});
+</script>
+{% endblock %}

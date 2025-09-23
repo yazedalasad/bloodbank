@@ -20,6 +20,88 @@
   </div>
 </div>
 
+<!-- NEW ENHANCEMENTS SECTION -->
+<div class="row g-4 py-4">
+  <div class="col-md-4">
+    <div class="card h-100 border-warning">
+      <div class="card-body text-center">
+        <i class="fas fa-map-marker-alt fa-3x text-warning mb-3"></i>
+        <h4 class="card-title">מיקום תורמים</h4>
+        <p class="card-text">
+          מצא תורמים קרובים במצבי חירום לפי מיקום גיאוגרפי
+        </p>
+        <a href="{% url 'emergency_locator' %}" class="btn btn-outline-warning">
+          חפש תורמים <i class="fas fa-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card h-100 border-danger">
+      <div class="card-body text-center">
+        <i class="fas fa-bullhorn fa-3x text-danger mb-3"></i>
+        <h4 class="card-title">התראות חירום</h4>
+        <p class="card-text">
+          שלח התראות המוניות לתורמים במצבים קריטיים
+        </p>
+        <a href="{% url 'mass_emergency_alert' %}" class="btn btn-outline-danger">
+          שלח התראות <i class="fas fa-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card h-100 border-info">
+      <div class="card-body text-center">
+        <i class="fas fa-chart-line fa-3x text-info mb-3"></i>
+        <h4 class="card-title">חיזוי מחסורים</h4>
+        <p class="card-text">
+          ניתוח מגמות וחיזוי מחסורים עתידיים בדם
+        </p>
+        <a href="{% url 'shortage_predictor' %}" class="btn btn-outline-info">
+          הצג חיזויים <i class="fas fa-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SECOND ROW OF ENHANCEMENTS -->
+<div class="row g-4 pb-4">
+  <div class="col-md-6">
+    <div class="card h-100 border-success">
+      <div class="card-body text-center">
+        <i class="fas fa-calendar-alt fa-3x text-success mb-3"></i>
+        <h4 class="card-title">לוח זמינות</h4>
+        <p class="card-text">
+          מעקב אחר זמינות תורמים לפי כלל 56 הימים
+        </p>
+        <a href="{% url 'availability_calendar' %}" class="btn btn-outline-success">
+          הצג זמינות <i class="fas fa-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card h-100 border-primary">
+      <div class="card-body text-center">
+        <i class="fas fa-users fa-3x text-primary mb-3"></i>
+        <h4 class="card-title">התאמה חכמה</h4>
+        <p class="card-text">
+          מצא את התורמים האופטימליים עבור בקשות ספציפיות
+        </p>
+        <a href="{% url 'smart_matching' %}" class="btn btn-outline-primary">
+          התאמה חכמה <i class="fas fa-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ORIGINAL EXISTING CARDS -->
 <div class="row g-4 py-5">
   <div class="col-md-4">
     <div class="card h-100 border-danger">
@@ -52,22 +134,19 @@
   </div>
 
   <div class="col-md-4">
-  <div class="card h-100 border-warning">
-    <div class="card-body text-center">
-      <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-      <h3 class="card-title">חירום</h3>
-      <p class="card-text">
-        ניהול מקרי חירום ודיווח מיידי על צרכי דם דחופים
-      </p>
-      <a  href="{% url 'emergency_request' %}" class="btn btn-outline-warning">
-        הצג חירום <i class="fas fa-arrow-right ms-1"></i>
-      </a>
+    <div class="card h-100 border-warning">
+      <div class="card-body text-center">
+        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+        <h3 class="card-title">חירום</h3>
+        <p class="card-text">
+          ניהול מקרי חירום ודיווח מיידי על צרכי דם דחופים
+        </p>
+        <a href="{% url 'emergency_request' %}" class="btn btn-outline-warning">
+          הצג חירום <i class="fas fa-arrow-right ms-1"></i>
+        </a>
+      </div>
     </div>
   </div>
-</div>
-
-
-  
 </div>
 
 <div class="alert alert-danger mt-4">

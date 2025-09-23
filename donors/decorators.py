@@ -1,7 +1,7 @@
 from django.http import HttpResponseForbidden
 from django.shortcuts import redirect
 from functools import wraps
-
+from .models import Profile
 from django.contrib import messages
 
 def doctor_required(view_func):
