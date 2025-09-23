@@ -1,0 +1,131 @@
+{% extends 'donors/base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-bullhorn me-2"></i>שליחת התראות חירום המוניות
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <h5><i class="fas fa-exclamation-triangle me-2"></i>אזהרה!</h5>
+                        <p class="mb-0">שליחת התראות חירום מיועדת למצבים קריטיים בלבד. השתמשו באחריות.</p>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="blood_type" class="form-label">סוג דם נדרש</label>
+                                <select name="blood_type" id="blood_type" class="form-select" required>
+                                    <option value="">בחר סוג דם...</option>
+                                    {% for blood_type, name in blood_types %}
+                                        <option value="{{ blood_type }}">{{ name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="emergency_type" class="form-label">סוג חירום</label>
+                                <select name="emergency_type" id="emergency_type" class="form-select" required>
+                                    {% for code, name in emergency_types %}
+                                        <option value="{{ code }}">{{ name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label for="custom_message" class="form-label">הודעה מותאמת אישית (אופציונלי)</label>
+                                <textarea name="custom_message" id="custom_message" class="form-control" rows="3" 
+                                          placeholder="הוסף פרטים ספציפיים למצב החירום..."></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="max_donors" class="form-label">מספר מקסימלי של תורמים להודעה</label>
+                                <input type="number" name="max_donors" id="max_donors" class="form-control" value="50" min="1" max="100">
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" required id="confirm_send">
+                                    <label class="form-check-label" for="confirm_send">
+                                        אני מאשר/ת כי זו בקשת חירום אמיתית ונדרשת פעולה מיידית
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-danger btn-lg">
+                                    <i class="fas fa-paper-plane me-2"></i>שלח התראות חירום
+                                </button>
+                                <a href="{% url 'home' %}" class="btn btn-secondary btn-lg">ביטול</a>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Preview Section -->
+                    <div class="mt-4 p-3 bg-light rounded">
+                        <h6>תצוגה מקדימה של הודעת החירום:</h6>
+                        <div id="messagePreview" class="p-3 bg-white border rounded">
+                            <p class="text-muted">בחר סוג דם וחירום כדי לראות תצוגה מקדימה</p>
+                        </div>
+                    </div>
+
+                    <!-- Emergency Guidelines -->
+                    <div class="mt-4 p-3 bg-light rounded">
+                        <h6><i class="fas fa-info-circle me-2"></i>הנחיות חירום:</h6>
+                        <ul class="mb-0">
+                            <li><strong>מצב קריטי:</strong> לשימוש כאשר יש צורך מיידי בדם להצלת חיים</li>
+                            <li><strong>אירוע רב נפגעים:</strong> לשימוש באירועים עם מספר נפגעים גבוה</li>
+                            <li><strong>ניתוח דחוף:</strong> לשימוש כאשר נדרש דם לניתוח הצלה</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const bloodTypeSelect = document.getElementById('blood_type');
+    const emergencyTypeSelect = document.getElementById('emergency_type');
+    const previewDiv = document.getElementById('messagePreview');
+    
+    const messages = {
+        'critical': '🔴 בקשת חירום דחופה! נדרש דם מסוג {blood_type} באופן מיידי. אנא פנה למרכז התרומות הקרוב.',
+        'mass_casualty': '🆘 אירוע רב נפגעים! נדרשים תורמי דם מסוג {blood_type} בדחיפות. חיי אדם בסכנה.',
+        'surgery': '💉 ניתוח דחוף! נדרש דם מסוג {blood_type} לניתוח הצלה. תרומתך יכולה להציל חיים.'
+    };
+    
+    const subjects = {
+        'critical': '🔴 בקשת חירום דחופה - תרומת דם נדרשת באופן מיידי',
+        'mass_casualty': '🆘 אירוע רב נפגעים - נדרשים תורמי דם בדחיפות',
+        'surgery': '💉 ניתוח דחוף - תרומת דם נדרשת לניתוח הצלה'
+    };
+    
+    function updatePreview() {
+        const bloodType = bloodTypeSelect.value;
+        const emergencyType = emergencyTypeSelect.value;
+        
+        if (bloodType && emergencyType) {
+            const bloodTypeName = bloodTypeSelect.options[bloodTypeSelect.selectedIndex].text;
+            const message = messages[emergencyType].replace('{blood_type}', bloodTypeName);
+            const subject = subjects[emergencyType].replace('{blood_type}', bloodTypeName);
+            
+            previewDiv.innerHTML = `
+                <p class="mb-2"><strong>נושא:</strong> ${subject}</p>
+                <p class="mb-2"><strong>תוכן:</strong> ${message}</p>
+                <small class="text-muted">ההודעה תישלח לכל התורמים המתאימים עם האימייל שלהם</small>
+            `;
+        } else {
+            previewDiv.innerHTML = '<p class="text-muted">בחר סוג דם וחירום כדי לראות תצוגה מקדימה</p>';
+        }
+    }
+    
+    bloodTypeSelect.addEventListener('change', updatePreview);
+    emergencyTypeSelect.addEventListener('change', updatePreview);
+    
+    // Initial update
+    updatePreview();
+});
+</script>
+{% endblock %}

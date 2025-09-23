@@ -902,3 +902,582 @@ def generate_patient_report(request):
     
     except Donor.DoesNotExist:
         return HttpResponse("No donor record found for your account.", status=404)
+    
+
+
+
+# =====================
+# NEW ENHANCEMENT FUNCTIONS (Add to your existing views.py)
+# =====================
+
+# 1. מיקום תורמים בקרבת מקום בחירום
+@doctor_required
+def emergency_donor_locator(request):
+    """
+    מציג תורמים קרובים כאשר אין מספיק מלאי לפי סוג דם
+    """
+    if request.method == 'POST':
+        blood_type_needed = request.POST.get('blood_type')
+        units_needed = int(request.POST.get('units_needed', 1))
+        max_distance = int(request.POST.get('max_distance', 50))  # ק"מ
+        
+        # סוגי דם תואמים
+        compatible_types = COMPATIBLE.get(blood_type_needed, [])
+        
+        available_donors = []
+        for donor in Donor.objects.filter(blood_type__in=compatible_types):
+            if donor.can_donate:
+                # חישוב מרחק וזמינות
+                distance = calculate_simple_distance(donor)
+                if distance <= max_distance:
+                    availability_score = calculate_availability_score(donor)
+                    
+                    available_donors.append({
+                        'donor': donor,
+                        'score': availability_score,
+                        'distance_km': distance,
+                        'last_donation': donor.last_donation_date,
+                        'days_until_available': donor.days_until_next_donation,
+                        'contact_info': f"{donor.phone_number}",
+                        'can_donate_now': donor.days_until_next_donation == 0
+                    })
+        
+        # מיון לפי זמינות (גבוה ביותר ראשון)
+        available_donors.sort(key=lambda x: x['score'], reverse=True)
+        
+        context = {
+            'blood_type_needed': blood_type_needed,
+            'units_needed': units_needed,
+            'max_distance': max_distance,
+            'available_donors': available_donors,
+            'total_found': len(available_donors),
+            'compatible_types': [bt for bt in Donor.BLOOD_TYPES if bt[0] in compatible_types],
+            'search_performed': True,
+        }
+        
+        return render(request, 'donors/emergency_locator.html', context)
+    
+    # GET request - show search form
+    return render(request, 'donors/emergency_locator.html', {
+        'blood_types': Donor.BLOOD_TYPES,
+        'search_performed': False
+    })
+
+def calculate_availability_score(donor):
+    """מחשב ניקוד זמינות לתורם (ניקוד גבוה יותר = יותר זמין)"""
+    score = 100
+    
+    # קנס על תרומה אחרונה
+    if donor.last_donation_date:
+        days_passed = (timezone.now().date() - donor.last_donation_date).days
+        if days_passed < 56:
+            score -= (56 - days_passed) * 2
+    
+    # בונוס על בריאות מעולה
+    if donor.health_status == 'excellent':
+        score += 20
+    elif donor.health_status == 'good':
+        score += 10
+    
+    # קנס על עישון/אלכוהול
+    if donor.smoking_status != 'never':
+        score -= 10
+    if donor.alcohol_use != 'never':
+        score -= 5
+    
+    return max(score, 0)
+
+def calculate_simple_distance(donor):
+    """חישוב מרחק פשוט - ניתן להחליף ב-GPS אמיתי later"""
+    # מימוש לדוגמה - מחזיר מרחק אקראי בין 1-50 ק"מ
+    return (hash(donor.national_id) % 50) + 1
+
+# 2. מערכת התראות חירום המונית עם אימייל
+@doctor_required
+def mass_emergency_alert(request):
+    """
+    שולחת התראות חירום להמון תורמים באמצעות אימייל
+    """
+    if request.method == 'POST':
+        blood_type = request.POST.get('blood_type')
+        emergency_type = request.POST.get('emergency_type')
+        custom_message = request.POST.get('custom_message', '')
+        max_donors = int(request.POST.get('max_donors', 50))
+        
+        # הודעות חירום מוגדרות מראש
+        emergency_messages = {
+            'critical': {
+                'subject': "🔴 בקשת חירום דחופה - תרומת דם נדרשת באופן מיידי",
+                'message': """
+שלום {donor_name},
+
+בקשת חירום דחופה! נדרש דם מסוג {blood_type} באופן מיידי.
+
+פרטים:
+- סוג דם נדרש: {blood_type}
+- רמת דחיפות: קריטית
+- זמן מענה: מיידי
+
+אנא פנה בהקדם האפשרי למרכז התרומות הקרוב אליך. תרומתך יכולה להציל חיים!
+
+כתובת המרכז הקרוב: [כתובת המרכז]
+טלפון: [מספר טלפון]
+
+בברכה,
+מערכת ניהול בנק הדם
+                """
+            },
+            'mass_casualty': {
+                'subject': "🆘 אירוע רב נפגעים - נדרשים תורמי דם בדחיפות",
+                'message': """
+שלום {donor_name},
+
+אירוע רב נפגעים! נדרשים תורמי דם מסוג {blood_type} בדחיפות רבה.
+
+פרטים:
+- סוג דם נדרש: {blood_type}
+- סוג אירוע: רב נפגעים
+- דחיפות: גבוהה ביותר
+
+חיי אדם בסכנה! אנא פנה מיידית למרכז התרומות הקרוב.
+
+כתובת המרכז הקרוב: [כתובת המרכז]
+טלפון: [מספר טלפון]
+
+תודה על שיתוף הפעולה בהצלת חיים,
+מערכת ניהול בנק הדם
+                """
+            },
+            'surgery': {
+                'subject': "💉 ניתוח דחוף - תרומת דם נדרשת לניתוח הצלה",
+                'message': """
+שלום {donor_name},
+
+ניתוח דחוף! נדרש דם מסוג {blood_type} לניתוח הצלה.
+
+פרטים:
+- סוג דם נדרש: {blood_type}
+- סוג צורך: ניתוח דחוף
+- זמן מענה: בתוך 24 שעות
+
+תרומתך יכולה לקבוע את ההבדל בין חיים למוות. אנא פנה למרכז התרומות.
+
+כתובת המרכז הקרוב: [כתובת המרכז]
+טלפון: [מספר טלפון]
+
+בתודה ובברכה,
+מערכת ניהול בנק הדם
+                """
+            }
+        }
+        
+        # בחירת הודעה לפי סוג החירום
+        message_template = emergency_messages.get(emergency_type, emergency_messages['critical'])
+        
+        # מציאת תורמים מתאימים
+        compatible_donors = Donor.objects.filter(
+            blood_type__in=COMPATIBLE.get(blood_type, [])
+        )[:max_donors]
+        
+        alerted_donors = []
+        failed_alerts = []
+        
+        for donor in compatible_donors:
+            if donor.can_donate and donor.email:
+                try:
+                    # התאמת ההודעה לתורם
+                    subject = message_template['subject']
+                    message = message_template['message'].format(
+                        donor_name=f"{donor.first_name} {donor.last_name}",
+                        blood_type=blood_type
+                    )
+                    
+                    # הוספת הודעה מותאמת אישית אם קיימת
+                    if custom_message:
+                        message += f"\n\nהערה נוספת: {custom_message}"
+                    
+                    # הוספת פרטים אישיים
+                    message += f"\n\n---\nפרטים אישיים:"
+                    message += f"\nתעודת זהות: {donor.national_id}"
+                    message += f"\nסוג הדם שלך: {donor.blood_type}"
+                    message += f"\nטלפון: {donor.phone_number}"
+                    
+                    # שליחת האימייל
+                    from .utils.email_service import send_email_with_attachment
+                    send_email_with_attachment(
+                        subject=subject,
+                        message=message,
+                        recipient_list=[donor.email]
+                    )
+                    
+                    alerted_donors.append({
+                        'donor': donor,
+                        'email': donor.email,
+                        'blood_type': donor.blood_type,
+                        'distance': calculate_simple_distance(donor),
+                        'status': 'נשלח בהצלחה'
+                    })
+                    
+                except Exception as e:
+                    failed_alerts.append({
+                        'donor': donor,
+                        'email': donor.email,
+                        'error': str(e),
+                        'status': 'נכשל'
+                    })
+        
+        # סטטיסטיקות שליחה
+        total_sent = len(alerted_donors)
+        total_failed = len(failed_alerts)
+        
+        context = {
+            'alerted_count': total_sent,
+            'failed_count': total_failed,
+            'blood_type': blood_type,
+            'emergency_type': emergency_type,
+            'alerted_donors': alerted_donors,
+            'failed_alerts': failed_alerts,
+            'message_template': message_template,
+            'custom_message': custom_message,
+        }
+        
+        if total_sent > 0:
+            messages.success(request, f"✅ התראות חירום נשלחו בהצלחה ל-{total_sent} תורמים")
+        if total_failed > 0:
+            messages.warning(request, f"⚠️ {total_failed} התראות נכשלו בשליחה")
+        
+        return render(request, 'donors/emergency_alert_results.html', context)
+    
+    # GET request - show the alert form
+    return render(request, 'donors/mass_emergency_alert.html', {
+        'blood_types': Donor.BLOOD_TYPES,
+        'emergency_types': [
+            ('critical', 'מצב קריטי - חירום מיידי'),
+            ('mass_casualty', 'אירוע רב נפגעים'),
+            ('surgery', 'ניתוח דחוף'),
+        ]
+    })
+
+# 3. חיזוי מחסור בדם
+@doctor_required
+def blood_shortage_predictor(request):
+    """
+    חוזה מחסורים עתידיים בדם לפי נתוני שימוש
+    """
+    # ניתוח נתונים אחרונים (30 יום)
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+    
+    # בקשות אחרונות
+    recent_requests = BloodRequest.objects.filter(
+        date_requested__gte=thirty_days_ago
+    )
+    
+    # תרומות אחרונות
+    recent_donations = Donation.objects.filter(
+        donation_date__gte=thirty_days_ago
+    )
+    
+    # חישוב מגמות לפי סוג דם
+    shortage_predictions = []
+    for blood_type, blood_name in Donor.BLOOD_TYPES:
+        # בקשות עבור סוג דם זה
+        type_requests = recent_requests.filter(blood_type_needed=blood_type)
+        total_requests = type_requests.count()
+        units_requested = type_requests.aggregate(total=Sum('units_needed'))['total'] or 0
+        
+        # תרומות של סוג דם זה
+        type_donations = recent_donations.filter(donor__blood_type=blood_type)
+        total_donations = type_donations.count()
+        units_donated = type_donations.aggregate(total=Sum('volume_ml'))['total'] or 0
+        units_donated = units_donated // 450  # המרה ליחידות
+        
+        # מלאי נוכחי
+        current_inventory = Donation.objects.filter(
+            donor__blood_type=blood_type,
+            is_approved=True
+        ).aggregate(total=Sum('volume_ml'))['total'] or 0
+        current_units = current_inventory // 450
+        
+        # חיזוי מחסור
+        daily_usage = units_requested / 30 if units_requested > 0 else 0.1
+        days_until_shortage = current_units / daily_usage if daily_usage > 0 else 999
+        
+        # דירוג סיכון
+        if days_until_shortage < 7:
+            risk_level = 'high'
+            risk_text = 'סיכון גבוה'
+        elif days_until_shortage < 14:
+            risk_level = 'medium'
+            risk_text = 'סיכון בינוני'
+        else:
+            risk_level = 'low'
+            risk_text = 'סיכון נמוך'
+        
+        shortage_predictions.append({
+            'blood_type': blood_type,
+            'blood_name': blood_name,
+            'current_units': current_units,
+            'daily_usage': round(daily_usage, 1),
+            'days_until_shortage': round(days_until_shortage, 1),
+            'risk_level': risk_level,
+            'risk_text': risk_text,
+            'total_requests': total_requests,
+            'total_donations': total_donations,
+        })
+    
+    # מיון לפי סיכון (גבוה ראשון)
+    shortage_predictions.sort(key=lambda x: x['days_until_shortage'])
+    
+    context = {
+        'predictions': shortage_predictions,
+        'analysis_date': timezone.now(),
+        'period_days': 30,
+    }
+    
+    return render(request, 'donors/shortage_predictor.html', context)
+
+# 4. לוח זמינות תורמים
+@doctor_required
+def donor_availability_calendar(request):
+    """
+    מציג מתי תורמים יכולים לתרום שוב לפי כלל 56 הימים
+    """
+    # תורמים שתרמו לאחרונה
+    recent_donors = Donor.objects.filter(
+        donations__isnull=False
+    ).annotate(
+        last_donation_date=Max('donations__donation_date'),
+        total_donations=Count('donations')
+    ).exclude(last_donation_date__isnull=True).order_by('-last_donation_date')
+    
+    availability_data = []
+    for donor in recent_donors:
+        next_donation_date = donor.last_donation_date + timedelta(days=56)
+        days_until_available = (next_donation_date - timezone.now().date()).days
+        can_donate_now = days_until_available <= 0
+        
+        availability_data.append({
+            'donor': donor,
+            'last_donation_date': donor.last_donation_date,
+            'next_donation_date': next_donation_date,
+            'days_until_available': days_until_available,
+            'can_donate_now': can_donate_now,
+            'total_donations': donor.total_donations,
+        })
+    
+    # גם תורמים שמעולם לא תרמו
+    new_donors = Donor.objects.filter(donations__isnull=True)
+    
+    context = {
+        'available_donors': [d for d in availability_data if d['can_donate_now']],
+        'soon_available': [d for d in availability_data if not d['can_donate_now'] and d['days_until_available'] <= 7],
+        'future_available': [d for d in availability_data if not d['can_donate_now'] and d['days_until_available'] > 7],
+        'new_donors': new_donors,
+        'today': timezone.now().date(),
+    }
+    
+    return render(request, 'donors/availability_calendar.html', context)
+
+# 5. התאמת תורמים חכמה לבקשות
+@doctor_required
+def smart_donor_matching(request, request_id=None):
+    """
+    מוצא את התורמים האופטימליים עבור בקשה ספציפית
+    """
+    if request_id:
+        # התאמה לבקשה ספציפית
+        blood_request = BloodRequest.objects.get(id=request_id)
+        blood_type = blood_request.blood_type_needed
+        units_needed = blood_request.units_needed
+    else:
+        # התאמה כללית
+        blood_type = request.GET.get('blood_type', 'O+')
+        units_needed = int(request.GET.get('units_needed', 1))
+        blood_request = None
+    
+    compatible_types = COMPATIBLE.get(blood_type, [])
+    
+    # מציאת התורמים המתאימים ביותר
+    matched_donors = []
+    for donor in Donor.objects.filter(blood_type__in=compatible_types):
+        if donor.can_donate:
+            match_score = calculate_match_score(donor, blood_type, units_needed)
+            
+            matched_donors.append({
+                'donor': donor,
+                'match_score': match_score,
+                'distance': calculate_simple_distance(donor),
+                'last_donation': donor.last_donation_date,
+                'can_donate_now': donor.days_until_next_donation == 0,
+                'health_status': donor.health_status,
+                'contact_info': donor.phone_number,
+            })
+    
+    # מיון לפי דירוג ההתאמה (גבוה ביותר ראשון)
+    matched_donors.sort(key=lambda x: x['match_score'], reverse=True)
+    
+    context = {
+        'blood_request': blood_request,
+        'blood_type': blood_type,
+        'units_needed': units_needed,
+        'matched_donors': matched_donors,
+        'compatible_types': compatible_types,
+        'total_matches': len(matched_donors),
+    }
+    
+    return render(request, 'donors/smart_matching.html', context)
+
+def calculate_match_score(donor, needed_blood_type, units_needed):
+    """
+    מחשב דירוג התאמה בין תורם לבקשה
+    """
+    score = 100
+    
+    # התאמת סוג דם (מדויק יותר = ניקוד גבוה יותר)
+    if donor.blood_type == needed_blood_type:
+        score += 30
+    elif needed_blood_type in ['O-', 'O+'] and donor.blood_type == needed_blood_type:
+        score += 50
+    
+    # זמינות מיידית
+    if donor.days_until_next_donation == 0:
+        score += 40
+    
+    # מצב בריאותי
+    if donor.health_status == 'excellent':
+        score += 25
+    elif donor.health_status == 'good':
+        score += 15
+    
+    # מרחק (קרוב יותר = טוב יותר)
+    distance = calculate_simple_distance(donor)
+    if distance <= 10:
+        score += 20
+    elif distance <= 25:
+        score += 10
+    
+    # ניסיון תרומה (יותר ניסיון = טוב יותר)
+    total_donations = donor.donations.count()
+    if total_donations > 5:
+        score += 15
+    elif total_donations > 0:
+        score += 5
+    
+    return score
+
+# AJAX endpoint for real-time availability check
+def check_donor_availability(request):
+    """בדיקת זמינות תורמים בזמן אמת"""
+    blood_type = request.GET.get('blood_type')
+    
+    available_count = Donor.objects.filter(
+        blood_type__in=COMPATIBLE.get(blood_type, []),
+        donations__is_approved=True
+    ).distinct().count()
+    
+    immediate_available = Donor.objects.filter(
+        blood_type__in=COMPATIBLE.get(blood_type, []),
+        donations__is_approved=True
+    ).annotate(
+        last_donation=Max('donations__donation_date')
+    ).filter(
+        Q(last_donation__isnull=True) | 
+        Q(last_donation__lte=timezone.now().date() - timedelta(days=56))
+    ).count()
+    
+    return JsonResponse({
+        'available_donors': available_count,
+        'immediate_available': immediate_available,
+        'blood_type': blood_type
+    })
+
+# פונקציית חירום מהירה - לשליחה מהירה ללא טופס
+@doctor_required
+def quick_emergency_alert(request, blood_type, emergency_type='critical'):
+    """
+    שליחת התראות חירום מהירות דרך URL
+    """
+    # בדיקה אם סוג הדם תקין
+    valid_blood_types = [bt[0] for bt in Donor.BLOOD_TYPES]
+    if blood_type not in valid_blood_types:
+        messages.error(request, f"סוג דם {blood_type} אינו תקין")
+        return redirect('mass_emergency_alert')
+    
+    # מציאת תורמים מתאימים
+    compatible_donors = Donor.objects.filter(
+        blood_type__in=COMPATIBLE.get(blood_type, [])
+    )[:20]  # הגבלה ל-20 תורמים לשליחה מהירה
+    
+    alerted_donors = []
+    for donor in compatible_donors:
+        if donor.can_donate and donor.email:
+            try:
+                subject = f"🔴 חירום - נדרש דם מסוג {blood_type}"
+                message = f"""
+שלום {donor.first_name} {donor.last_name},
+
+בקשת חירום דחופה! נדרש דם מסוג {blood_type} באופן מיידי.
+
+אנא פנה בהקדם למרכז התרומות הקרוב אליך.
+
+פרטיך:
+- סוג דם: {donor.blood_type}
+- טלפון: {donor.phone_number}
+
+כתובת המרכז הקרוב: [כתובת המרכז]
+טלפון: [מספר טלפון]
+
+בברכה,
+מערכת ניהול בנק הדם
+                """
+                
+                from .utils.email_service import send_email_with_attachment
+                send_email_with_attachment(
+                    subject=subject,
+                    message=message,
+                    recipient_list=[donor.email]
+                )
+                
+                alerted_donors.append(donor)
+                
+            except Exception as e:
+                print(f"שגיאה בשליחה ל-{donor.email}: {e}")
+    
+    messages.success(request, f"התראות חירום נשלחו ל-{len(alerted_donors)} תורמים מסוג {blood_type}")
+    return redirect('mass_emergency_alert')
+
+# בדיקת תפוסת אימיילים לפני שליחה
+@doctor_required
+def check_email_capacity(request):
+    """
+    בודק כמה תורמים עם אימייל זמינים לפני שליחה המונית
+    """
+    blood_type = request.GET.get('blood_type', 'O+')
+    
+    # תורמים עם אימייל שזמינים לתרומה
+    available_with_email = Donor.objects.filter(
+        blood_type__in=COMPATIBLE.get(blood_type, []),
+        email__isnull=False,
+        donations__is_approved=True
+    ).distinct().count()
+    
+    # תורמים זמינים מיידית עם אימייל
+    immediate_with_email = Donor.objects.filter(
+        blood_type__in=COMPATIBLE.get(blood_type, []),
+        email__isnull=False,
+        donations__is_approved=True
+    ).annotate(
+        last_donation=Max('donations__donation_date')
+    ).filter(
+        Q(last_donation__isnull=True) | 
+        Q(last_donation__lte=timezone.now().date() - timedelta(days=56))
+    ).count()
+    
+    return JsonResponse({
+        'available_with_email': available_with_email,
+        'immediate_with_email': immediate_with_email,
+        'blood_type': blood_type,
+        'compatible_types': COMPATIBLE.get(blood_type, [])
+    })
+
+   

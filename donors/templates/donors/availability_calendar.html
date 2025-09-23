@@ -1,0 +1,365 @@
+{% extends 'donors/base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-calendar-alt me-2"></i>לוח זמינות תורמים
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- Summary Cards -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card text-white bg-success">
+                                <div class="card-body text-center">
+                                    <h2>{{ available_donors|length }}</h2>
+                                    <p class="mb-0">זמינים כעת</p>
+                                    <small>יכולים לתרום היום</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-white bg-warning">
+                                <div class="card-body text-center">
+                                    <h2>{{ soon_available|length }}</h2>
+                                    <p class="mb-0">זמינים תוך שבוע</p>
+                                    <small>יעמדו בקריטריון 56 יום</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-white bg-info">
+                                <div class="card-body text-center">
+                                    <h2>{{ future_available|length }}</h2>
+                                    <p class="mb-0">זמינים בהמשך</p>
+                                    <small>יותר משבוע מעכשיו</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-white bg-secondary">
+                                <div class="card-body text-center">
+                                    <h2>{{ new_donors.count }}</h2>
+                                    <p class="mb-0">תורמים חדשים</p>
+                                    <small>מעולם לא תרמו</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Available Now Section -->
+                    {% if available_donors %}
+                    <div class="mb-5">
+                        <h4 class="text-success mb-3">
+                            <i class="fas fa-check-circle me-2"></i>תורמים זמינים כעת ({{ available_donors|length }})
+                        </h4>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-success">
+                                    <tr>
+                                        <th>תורם</th>
+                                        <th>סוג דם</th>
+                                        <th>תרומות קודמות</th>
+                                        <th>טלפון</th>
+                                        <th>תאריך תרומה אחרונה</th>
+                                        <th>פעולות</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for donor_info in available_donors %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ donor_info.donor.first_name }} {{ donor_info.donor.last_name }}</strong>
+                                            <br>
+                                            <small class="text-muted">ת"ז: {{ donor_info.donor.national_id }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-danger fs-6">{{ donor_info.donor.blood_type }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ donor_info.total_donations }}</span>
+                                            <br>
+                                            <small class="text-muted">תרומות</small>
+                                        </td>
+                                        <td>
+                                            {{ donor_info.donor.phone_number }}
+                                            {% if donor_info.donor.email %}
+                                            <br>
+                                            <small class="text-muted">{{ donor_info.donor.email }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ donor_info.last_donation_date|date:"d/m/Y" }}
+                                            <br>
+                                            <small class="text-success">✔️ זמין לתרומה</small>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-primary contact-btn" 
+                                                        data-phone="{{ donor_info.donor.phone_number }}"
+                                                        data-email="{{ donor_info.donor.email|default:'לא צוין' }}">
+                                                    <i class="fas fa-phone"></i>
+                                                </button>
+                                                <a href="{% url 'donation_create' %}" class="btn btn-outline-success">
+                                                    <i class="fas fa-plus"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Soon Available Section -->
+                    {% if soon_available %}
+                    <div class="mb-5">
+                        <h4 class="text-warning mb-3">
+                            <i class="fas fa-clock me-2"></i>זמינים תוך שבוע ({{ soon_available|length }})
+                        </h4>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-warning">
+                                    <tr>
+                                        <th>תורם</th>
+                                        <th>סוג דם</th>
+                                        <th>זמין מ-</th>
+                                        <th>ימים נותרו</th>
+                                        <th>תאריך תרומה אחרונה</th>
+                                        <th>פעולות</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for donor_info in soon_available %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ donor_info.donor.first_name }} {{ donor_info.donor.last_name }}</strong>
+                                            <br>
+                                            <small class="text-muted">ת"ז: {{ donor_info.donor.national_id }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-danger fs-6">{{ donor_info.donor.blood_type }}</span>
+                                        </td>
+                                        <td>
+                                            {{ donor_info.next_donation_date|date:"d/m/Y" }}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-warning">{{ donor_info.days_until_available }} ימים</span>
+                                        </td>
+                                        <td>
+                                            {{ donor_info.last_donation_date|date:"d/m/Y" }}
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-secondary schedule-reminder-btn" 
+                                                    data-donor-id="{{ donor_info.donor.id }}"
+                                                    data-reminder-date="{{ donor_info.next_donation_date|date:'Y-m-d' }}">
+                                                <i class="fas fa-bell"></i> תזכורת
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Future Available Section -->
+                    {% if future_available %}
+                    <div class="mb-5">
+                        <h4 class="text-info mb-3">
+                            <i class="fas fa-calendar me-2"></i>זמינים בהמשך ({{ future_available|length }})
+                        </h4>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-info">
+                                    <tr>
+                                        <th>תורם</th>
+                                        <th>סוג דם</th>
+                                        <th>זמין מ-</th>
+                                        <th>ימים נותרו</th>
+                                        <th>תאריך תרומה אחרונה</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for donor_info in future_available %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ donor_info.donor.first_name }} {{ donor_info.donor.last_name }}</strong>
+                                            <br>
+                                            <small class="text-muted">ת"ז: {{ donor_info.donor.national_id }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-danger fs-6">{{ donor_info.donor.blood_type }}</span>
+                                        </td>
+                                        <td>
+                                            {{ donor_info.next_donation_date|date:"d/m/Y" }}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">{{ donor_info.days_until_available }} ימים</span>
+                                        </td>
+                                        <td>
+                                            {{ donor_info.last_donation_date|date:"d/m/Y" }}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- New Donors Section -->
+                    {% if new_donors %}
+                    <div class="mb-4">
+                        <h4 class="text-secondary mb-3">
+                            <i class="fas fa-user-plus me-2"></i>תורמים חדשים ({{ new_donors.count }})
+                        </h4>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-secondary">
+                                    <tr>
+                                        <th>תורם</th>
+                                        <th>סוג דם</th>
+                                        <th>טלפון</th>
+                                        <th>סטטוס</th>
+                                        <th>פעולות</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for donor in new_donors %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ donor.first_name }} {{ donor.last_name }}</strong>
+                                            <br>
+                                            <small class="text-muted">ת"ז: {{ donor.national_id }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-danger fs-6">{{ donor.blood_type }}</span>
+                                        </td>
+                                        <td>{{ donor.phone_number }}</td>
+                                        <td>
+                                            <span class="badge bg-success">זמין לתרומה ראשונה</span>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'donation_create' %}" class="btn btn-sm btn-outline-success">
+                                                <i class="fas fa-tint me-1"></i>תרומה ראשונה
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Empty State -->
+                    {% if not available_donors and not soon_available and not future_available and not new_donors %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">אין תורמים זמינים כרגע</h4>
+                        <p class="text-muted">הוסף תורמים חדשים או חכה לתורמים קיימים שיהיו זמינים</p>
+                        <a href="{% url 'donor_create' %}" class="btn btn-primary">
+                            <i class="fas fa-user-plus me-2"></i>הוסף תורם חדש
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    <!-- Summary Info -->
+                    <div class="mt-4 p-3 bg-light rounded">
+                        <h6><i class="fas fa-info-circle me-2"></i>מידע על זמינות תורמים:</h6>
+                        <ul class="mb-0">
+                            <li>תורם יכול לתרום כל 56 ימים (8 שבועות) לפי הנחיות משרד הבריאות</li>
+                            <li>תורמים חדשים זמינים מיידית לתרומה ראשונה</li>
+                            <li>מומלץ לתזמן תורמים 3-4 ימים לפני הזמינות שלהם</li>
+                        </ul>
+                    </div>
+
+                    <!-- Current Date -->
+                    <div class="mt-3 text-muted small">
+                        <i class="fas fa-clock me-1"></i>תאריך היום: {{ today|date:"d/m/Y" }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Contact button functionality
+    const contactButtons = document.querySelectorAll('.contact-btn');
+    contactButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const phone = this.getAttribute('data-phone');
+            const email = this.getAttribute('data-email');
+            alert('טלפון: ' + phone + '\nאימייל: ' + email);
+        });
+    });
+
+    // Schedule reminder button functionality
+    const reminderButtons = document.querySelectorAll('.schedule-reminder-btn');
+    reminderButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const donorId = this.getAttribute('data-donor-id');
+            const reminderDate = this.getAttribute('data-reminder-date');
+            const formattedDate = formatDate(reminderDate);
+            
+            if (confirm('האם ליצור תזכורת ליום ' + formattedDate + '?')) {
+                scheduleReminder(donorId, reminderDate);
+            }
+        });
+    });
+});
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('he-IL');
+}
+
+function scheduleReminder(donorId, reminderDate) {
+    // In a real implementation, this would schedule an email/SMS reminder
+    const formattedDate = formatDate(reminderDate);
+    alert('תזכורת נקבעה ליום ' + formattedDate);
+    
+    // Example: Send to backend to schedule reminder
+    // fetch('/api/schedule-reminder/', {
+    //     method: 'POST',
+    //     headers: {
+    //         'Content-Type': 'application/json',
+    //         'X-CSRFToken': getCookie('csrftoken')
+    //     },
+    //     body: JSON.stringify({
+    //         donor_id: donorId,
+    //         reminder_date: reminderDate
+    //     })
+    // }).then(response => {
+    //     if (response.ok) {
+    //         alert('תזכורת נקבעה בהצלחה!');
+    //     }
+    // });
+}
+
+// Helper function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

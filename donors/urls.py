@@ -22,6 +22,16 @@ urlpatterns = [
     path('profile/', views.profile_view, name='profile'),
     path('reports/doctor/',views.generate_doctor_report, name='doctor_report'),
     path('reports/patient/', views.generate_patient_report, name='patient_report'),
+    path('emergency/locator/', views.emergency_donor_locator, name='emergency_locator'),
+    path('emergency/mass-alert/', views.mass_emergency_alert, name='mass_emergency_alert'),
+    path('emergency/quick/<str:blood_type>/', views.quick_emergency_alert, name='quick_emergency'),
+    path('emergency/quick/<str:blood_type>/<str:emergency_type>/', views.quick_emergency_alert, name='quick_emergency_type'),
+    path('emergency/check-capacity/', views.check_email_capacity, name='check_email_capacity'),
+    path('predictor/shortage/', views.blood_shortage_predictor, name='shortage_predictor'),
+    path('donors/availability/', views.donor_availability_calendar, name='availability_calendar'),
+    path('matching/smart/', views.smart_donor_matching, name='smart_matching'),
+    path('matching/smart/<int:request_id>/', views.smart_donor_matching, name='smart_matching_request'),
+    path('check-availability/', views.check_donor_availability, name='check_availability'),
 
 
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

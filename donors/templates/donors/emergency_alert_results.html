@@ -1,0 +1,177 @@
+{% extends 'donors/base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-{% if alerted_count > 0 %}success{% else %}warning{% endif %} text-white">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-clipboard-check me-2"></i>תוצאות שליחת התראות חירום
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- Summary Stats -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card text-white bg-success">
+                                <div class="card-body text-center">
+                                    <h2>{{ alerted_count }}</h2>
+                                    <p class="mb-0">התראות נשלחו</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-white bg-{% if failed_count > 0 %}danger{% else %}success{% endif %}">
+                                <div class="card-body text-center">
+                                    <h2>{{ failed_count }}</h2>
+                                    <p class="mb-0">התראות נכשלו</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-white bg-info">
+                                <div class="card-body text-center">
+                                    <h2>{{ blood_type }}</h2>
+                                    <p class="mb-0">סוג דם נדרש</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-white bg-secondary">
+                                <div class="card-body text-center">
+                                    <h2>{{ emergency_type }}</h2>
+                                    <p class="mb-0">סוג חירום</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Success Summary -->
+                    {% if alerted_count > 0 %}
+                    <div class="alert alert-success">
+                        <h5><i class="fas fa-check-circle me-2"></i>התראות שנשלחו בהצלחה</h5>
+                        <p class="mb-0">ההודעות נשלחו ל-{{ alerted_count }} תורמים עם סוג דם תואם ל-{{ blood_type }}</p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Failed Summary -->
+                    {% if failed_count > 0 %}
+                    <div class="alert alert-danger">
+                        <h5><i class="fas fa-exclamation-triangle me-2"></i>התראות שנכשלו</h5>
+                        <p class="mb-0">{{ failed_count }} הודעות לא נשלחו עקב שגיאות טכניות</p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Sent Alerts Details -->
+                    {% if alerted_donors %}
+                    <div class="mb-4">
+                        <h5 class="text-success">
+                            <i class="fas fa-paper-plane me-2"></i>פרטי התראות שנשלחו
+                        </h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>תורם</th>
+                                        <th>סוג דם</th>
+                                        <th>אימייל</th>
+                                        <th>טלפון</th>
+                                        <th>מרחק (ק"מ)</th>
+                                        <th>סטטוס</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for alert in alerted_donors %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>
+                                            <strong>{{ alert.donor.first_name }} {{ alert.donor.last_name }}</strong>
+                                            <br><small class="text-muted">ת"ז: {{ alert.donor.national_id }}</small>
+                                        </td>
+                                        <td><span class="badge bg-danger">{{ alert.blood_type }}</span></td>
+                                        <td>{{ alert.email }}</td>
+                                        <td>{{ alert.donor.phone_number }}</td>
+                                        <td>{{ alert.distance }}</td>
+                                        <td><span class="badge bg-success">{{ alert.status }}</span></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Failed Alerts Details -->
+                    {% if failed_alerts %}
+                    <div class="mb-4">
+                        <h5 class="text-danger">
+                            <i class="fas fa-times-circle me-2"></i>התראות שנכשלו
+                        </h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>תורם</th>
+                                        <th>אימייל</th>
+                                        <th>סיבת הכישלון</th>
+                                        <th>סטטוס</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for alert in failed_alerts %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ alert.donor.first_name }} {{ alert.donor.last_name }}</strong>
+                                            <br><small class="text-muted">ת"ז: {{ alert.donor.national_id }}</small>
+                                        </td>
+                                        <td>{{ alert.email }}</td>
+                                        <td><span class="text-danger">{{ alert.error }}</span></td>
+                                        <td><span class="badge bg-danger">{{ alert.status }}</span></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Next Steps -->
+                    <div class="mt-4 p-3 bg-light rounded">
+                        <h6><i class="fas fa-forward me-2"></i>השלבים הבאים:</h6>
+                        <ul class="mb-0">
+                            <li>עקוב אחר תגובות התורמים בטלפון</li>
+                            <li>עדכן את מערכת הבקשות כאשר תורמים מגיעים</li>
+                            <li>בדוק את המלאי המעודכן בדוח המלאי</li>
+                            {% if failed_count > 0 %}
+                            <li class="text-danger">נסה לשלוח שוב להתראות שנכשלו</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-2 mt-4">
+                        <a href="{% url 'mass_emergency_alert' %}" class="btn btn-primary">
+                            <i class="fas fa-bullhorn me-2"></i>שלח התראות נוספות
+                        </a>
+                        <a href="{% url 'emergency_locator' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-map-marker-alt me-2"></i>מיקום תורמים
+                        </a>
+                        <a href="{% url 'inventory_report' %}" class="btn btn-outline-info">
+                            <i class="fas fa-chart-bar me-2"></i>דוח מלאי
+                        </a>
+                        <a href="{% url 'home' %}" class="btn btn-secondary">
+                            <i class="fas fa-home me-2"></i>דף הבית
+                        </a>
+                    </div>
+
+                    <!-- Timestamp -->
+                    <div class="mt-3 text-muted small">
+                        <i class="fas fa-clock me-1"></i>זמן שליחה: {% now "d/m/Y H:i" %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
