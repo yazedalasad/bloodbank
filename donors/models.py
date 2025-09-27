@@ -307,7 +307,7 @@ class Donor(models.Model):
         null=True,
         blank=True,
         verbose_name=_("תאריך בדיקה רפואית אחרונה"),
-        help_text=_("תאריך הבדיקה הרפואית האחרונה")
+        help_text=_("תאריך הבדיקה הרפואית האחרונה - לא יכול להיות בעתיד")
     )
 
     # System Fields
@@ -391,6 +391,10 @@ class Donor(models.Model):
         if self.has_chronic_illness and not self.chronic_illness_details:
             raise ValidationError(_(
                 "יש לציין פרטי מחלות כרוניות אם סימנת שיש מחלות כרוניות"
+            ))
+        if self.last_medical_exam and self.last_medical_exam > date.today():
+            raise ValidationError(_(
+                "תאריך הבדיקה הרפואית לא יכול להיות בעתיד"
             ))
 
     def save(self, *args, **kwargs):
