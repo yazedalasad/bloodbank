@@ -13,7 +13,11 @@ class Command(BaseCommand):
         
         # Reset everything
         self.stdout.write('🗑️  מוחק נתונים קיימים...')
-        User.objects.all().delete()  # This will cascade to related objects
+        Donation.objects.all().delete()
+        BloodRequest.objects.all().delete()
+        Donor.objects.all().delete()
+        Profile.objects.all().delete()
+        User.objects.all().delete()
         
         users_data = []
         doctors_data = []
@@ -53,7 +57,7 @@ class Command(BaseCommand):
             Profile.objects.create(
                 user=user,
                 role='doctor',
-                phone_number=f'+9725012345{i:02d}'
+                phone_number=f'+972-50-123-45{i:02d}'  # Changed format to avoid duplicates
             )
             
             doctors_data.append({
@@ -94,7 +98,7 @@ class Command(BaseCommand):
             Profile.objects.create(
                 user=user,
                 role='patient',
-                phone_number=f'+9725212345{i:02d}'
+                phone_number=f'+972-52-123-45{i:02d}'  # Changed format to avoid duplicates
             )
             
             patients_data.append({
@@ -109,18 +113,28 @@ class Command(BaseCommand):
         # ==============================
         # CREATE DONORS (Mix of Doctors & Patients)
         # ==============================
-        self.stdout.write('🩸 יוצר 8 תורמים (שילוב של רופאים ומטופלים)...')
+        self.stdout.write('🩸 יוצר 12 תורמים (שילוב של רופאים ומטופלים)...')
         
         # Get some doctors to be donors
         doctor_users = User.objects.filter(profile__role='doctor')
         patient_users = User.objects.filter(profile__role='patient')
         
-        # Make first 3 doctors also donors
+        # Blood types distribution - ensure we have O- donors
         blood_types = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
         
         donor_count = 0
-        for doctor_user in doctor_users[:3]:
+        o_negative_donors = []
+        
+        # Make first 4 doctors also donors
+        for doctor_user in doctor_users[:4]:
             national_id = f"1234567{donor_count + 1:02d}"
+            
+            # Ensure we have at least 2 O- donors
+            if donor_count < 2:
+                blood_type = 'O-'
+                o_negative_donors.append(doctor_user)
+            else:
+                blood_type = random.choice([bt for bt in blood_types if bt != 'O-'])
             
             donor = Donor.objects.create(
                 user=doctor_user,
@@ -128,8 +142,8 @@ class Command(BaseCommand):
                 first_name=doctor_user.first_name.replace('ד"ר ', ''),
                 last_name=doctor_user.last_name,
                 date_of_birth=date(1970 + donor_count, 1, 1),
-                blood_type=random.choice(blood_types),
-                phone_number=doctor_user.profile.phone_number,
+                blood_type=blood_type,
+                phone_number=f'+972-54-123-45{donor_count + 1:02d}',  # Different phone format for donors
                 email=doctor_user.email,
                 smoking_status='never',
                 alcohol_use='never'
@@ -140,14 +154,23 @@ class Command(BaseCommand):
                 'password': f"{doctor_user.username}pass",
                 'name': doctor_user.get_full_name(),
                 'type': 'רופא ותורם',
-                'national_id': national_id
+                'national_id': national_id,
+                'blood_type': blood_type
             })
             
             donor_count += 1
+            self.stdout.write(f'✅ תורם רופא נוצר: {doctor_user.username} - {blood_type}')
         
-        # Make first 5 patients also donors
-        for patient_user in patient_users[:5]:
+        # Make first 8 patients also donors
+        for patient_user in patient_users[:8]:
             national_id = f"9876543{donor_count + 1:02d}"
+            
+            # Ensure we have at least 4 O- donors total
+            if len(o_negative_donors) < 4:
+                blood_type = 'O-'
+                o_negative_donors.append(patient_user)
+            else:
+                blood_type = random.choice([bt for bt in blood_types if bt != 'O-'])
             
             donor = Donor.objects.create(
                 user=patient_user,
@@ -155,8 +178,8 @@ class Command(BaseCommand):
                 first_name=patient_user.first_name,
                 last_name=patient_user.last_name,
                 date_of_birth=date(1980 + donor_count, 1, 1),
-                blood_type=random.choice(blood_types),
-                phone_number=patient_user.profile.phone_number,
+                blood_type=blood_type,
+                phone_number=f'+972-55-123-45{donor_count + 1:02d}',  # Different phone format for donors
                 email=patient_user.email,
                 smoking_status=random.choice(['never', 'light']),
                 alcohol_use=random.choice(['never', 'social'])
@@ -167,35 +190,60 @@ class Command(BaseCommand):
                 'password': f"{patient_user.username}pass",
                 'name': patient_user.get_full_name(),
                 'type': 'מטופל ותורם',
-                'national_id': national_id
+                'national_id': national_id,
+                'blood_type': blood_type
             })
             
             donor_count += 1
+            self.stdout.write(f'✅ תורם מטופל נוצר: {patient_user.username} - {blood_type}')
         
         # ==============================
-        # CREATE DONATIONS (2-4 per donor)
+        # CREATE DONATIONS (Strategic creation for emergency availability)
         # ==============================
-        self.stdout.write('💉 יוצר תרומות לתורמים...')
+        self.stdout.write('💉 יוצר תרומות לתורמים (אסטרטגיה לזמינות בחירום)...')
         
         all_donors = Donor.objects.all()
         donation_count = 0
         
         for donor in all_donors:
-            num_donations = random.randint(2, 4)
-            
-            for i in range(num_donations):
-                # Create donation dates going back 3 years
-                days_back = random.randint(30, 1000)
-                donation_date = date.today() - timedelta(days=days_back + (i * 100))
-                
-                Donation.objects.create(
-                    donor=donor,
-                    donation_date=donation_date,
-                    volume_ml=random.choice([350, 400, 450, 500]),
-                    notes=f"תרומה רגילה #{i+1}",
-                    is_approved=True
-                )
-                donation_count += 1
+            # For O- donors: create only old donations (more than 56 days ago)
+            # For other donors: mix of recent and old donations
+            if donor.blood_type == 'O-':
+                # O- donors get only old donations (60-365 days ago) so they're available
+                num_donations = random.randint(1, 2)
+                for i in range(num_donations):
+                    days_back = random.randint(60, 365)  # More than 56 days
+                    donation_date = date.today() - timedelta(days=days_back)
+                    
+                    Donation.objects.create(
+                        donor=donor,
+                        donation_date=donation_date,
+                        volume_ml=450,
+                        notes=f"תרומה רגילה #{i+1}",
+                        is_approved=True
+                    )
+                    donation_count += 1
+            else:
+                # Other donors get mix of recent and old donations
+                num_donations = random.randint(2, 4)
+                for i in range(num_donations):
+                    if i == 0:
+                        # Recent donation (less than 56 days)
+                        days_back = random.randint(1, 55)
+                    else:
+                        # Old donation
+                        days_back = random.randint(60, 1000)
+                    
+                    donation_date = date.today() - timedelta(days=days_back)
+                    
+                    Donation.objects.create(
+                        donor=donor,
+                        donation_date=donation_date,
+                        volume_ml=random.choice([350, 400, 450, 500]),
+                        notes=f"תרומה רגילה #{i+1}",
+                        is_approved=True
+                    )
+                    donation_count += 1
         
         self.stdout.write(f'✅ נוצרו {donation_count} תרומות')
         
@@ -204,7 +252,6 @@ class Command(BaseCommand):
         # ==============================
         self.stdout.write('🩸 יוצר בקשות לדם...')
         
-        blood_types = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
         patients = User.objects.filter(profile__role='patient')
         
         for i in range(20):  # Create 20 blood requests
@@ -242,13 +289,31 @@ class Command(BaseCommand):
         
         # Donors (special highlight)
         self.stdout.write('\n🩸 תורמים (רופאים ומטופלים שתרמו):')
-        self.stdout.write('-' * 50)
+        self.stdout.write('-' * 60)
         donor_users = [u for u in users_data if 'תורם' in u['type']]
         for donor in donor_users:
-            self.stdout.write(f"שם משתמש: {donor['username']} | סיסמה: {donor['password']} | שם: {donor['name']} | ת.ז.: {donor['national_id']}")
+            # Check if donor can donate
+            donor_obj = Donor.objects.get(national_id=donor['national_id'])
+            status = "🟢 זמין" if donor_obj.can_donate else "🔴 לא זמין (תרם לאחרונה)"
+            self.stdout.write(f"שם משתמש: {donor['username']} | סיסמה: {donor['password']} | שם: {donor['name']} | ת.ז.: {donor['national_id']} | סוג דם: {donor['blood_type']} | {status}")
+        
+        # Emergency system info
+        self.stdout.write('\n🚨 מערכת חירום:')
+        self.stdout.write('-' * 60)
+        
+        # Count available O- donors
+        available_o_negative = 0
+        for donor in Donor.objects.filter(blood_type='O-'):
+            if donor.can_donate:
+                available_o_negative += 1
+        
+        self.stdout.write(f"✅ מספר תורמי O- זמינים: {available_o_negative}")
+        self.stdout.write(f"✅ יחידות דם זמינות בחירום: {available_o_negative}")
+        self.stdout.write("💡 תורמי O- לא תרמו ב-56 הימים האחרונים - זמינים לתרומת חירום!")
         
         self.stdout.write('\n' + '='*60)
         self.stdout.write(self.style.SUCCESS('🎉 מילוי הנתונים הסתיים בהצלחה!'))
         self.stdout.write('🚀 הפעל: python manage.py runserver')
         self.stdout.write('📱 תבדקו עם פרטי הכניסה שלמעלה')
+        self.stdout.write('🚨 דף החירום אמור לעבוד עכשיו עם תורמי O- זמינים!')
         self.stdout.write('='*60)

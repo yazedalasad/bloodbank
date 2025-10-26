@@ -1,7 +1,8 @@
+import random
 from django.shortcuts import render, redirect
 
 from django.db.models import Sum,Max
-from .models import Donor, Donation, BloodRequest
+from .models import Donor, Donation, BloodRequest, EmergencyRequest, Location, UserLocation
 from .forms import DonorForm, DonationForm, BloodRequestForm
 from .decorators import doctor_required, patient_required  
 from django.contrib.auth.decorators import login_required
@@ -408,93 +409,140 @@ from django.utils import timezone
 from django.http import JsonResponse
 
 def emergency_request(request):
+    # Calculate available donors FIRST
+    all_o_negative = Donor.objects.filter(blood_type='O-')
+    available_donors = []
+    
+    for donor in all_o_negative:
+        if donor.can_donate:
+            available_donors.append(donor)
+    
+    available_units = len(available_donors)
+    
     if request.method == 'POST':
+        # Get form data
         units_needed = int(request.POST.get('units_needed', 0))
+        contact_name = request.POST.get('contact_name', '')
+        contact_phone = request.POST.get('contact_phone', '')
+        contact_relationship = request.POST.get('contact_relationship', 'family')
+        patient_name = request.POST.get('patient_name', '')
+        hospital = request.POST.get('hospital', '')
+        emergency_level = request.POST.get('emergency_level', 'critical')
+        notes = request.POST.get('notes', '')
+        
+        # VALIDATION: Check if there are actually available units
+        if available_units == 0:
+            messages.error(request, '❌ אין תורמי O- זמינים כרגע. כל התורמים תרמו לאחרונה ולא יכולים לתרום שוב עד שיעברו 56 יום.')
+            return redirect('emergency_request')
         
         if units_needed <= 0:
             messages.error(request, 'מספר היחידות חייב להיות גדול מ-0')
             return redirect('emergency_request')
         
-        # Get all O- donors with their available blood amount
-        o_negative_donors = Donor.objects.filter(blood_type='O-').annotate(
-            total_donated=Sum('donations__volume_ml')
-        ).order_by('total_donated')  # Prefer donors who donated less
+        if units_needed > available_units:
+            messages.error(request, f'❌ אין מספיק תורמים זמינים. רק {available_units} יחידות זמינות מתוך {units_needed} שביקשת.')
+            return redirect('emergency_request')
         
+        if not contact_name or not contact_phone:
+            messages.error(request, 'שם איש קשר וטלפון הם שדות חובה')
+            return redirect('emergency_request')
+        
+        # Process the emergency request
         remaining_units = units_needed
         donation_messages = []
+        matched_donors = []
         
-        for donor in o_negative_donors:
+        # Create emergency request record
+        emergency_request = EmergencyRequest.objects.create(
+            units_needed=units_needed,
+            contact_name=contact_name,
+            contact_phone=contact_phone,
+            contact_relationship=contact_relationship,
+            patient_name=patient_name or "מטופל אנונימי",
+            hospital=hospital or "מיקום לא specified",
+            emergency_level=emergency_level,
+            notes=notes,
+            automatic_match=True
+        )
+        
+        # Process donations with available donors
+        for donor in available_donors:
             if remaining_units <= 0:
                 break
                 
-            # Calculate how much this donor can give (max 500ml per donation = ~1 unit)
-            can_give = min(remaining_units, 1)  # 1 unit per donor for emergency
+            # Each donor can give 1 unit in emergency
+            can_give = min(remaining_units, 1)
             
             if can_give > 0:
                 # Create donation record
                 donation = Donation.objects.create(
                     donor=donor,
                     donation_date=timezone.now().date(),
-                    volume_ml=can_give * 450,  # Convert units to ml (450ml per unit)
+                    volume_ml=can_give * 450,
                     notes=f"תרומת חירום אוטומטית - {can_give} יחידות",
                     is_approved=True
                 )
                 
                 donation_messages.append(
-                    f"נלקח דם מתורם {donor.first_name} {donor.last_name} "
+                    f"✅ נלקח דם מתורם {donor.get_full_name()} "
                     f"(ת\"ז: {donor.national_id}) - {can_give} יחידות"
                 )
                 
+                matched_donors.append(donor)
                 remaining_units -= can_give
         
-        # Create blood request record
-        blood_request = BloodRequest.objects.create(
-            patient_name="חירום - מטופל אנונימי",
-            blood_type_needed='O-',
-            units_needed=units_needed,
-            priority='critical',
-            emergency=True,
-            fulfilled=(remaining_units == 0)
-        )
+        # Update the emergency request
+        if matched_donors:
+            emergency_request.matched_donors.set(matched_donors)
         
-        # Prepare success message
-        if remaining_units == 0:
-            success_msg = (
-                f"✅ בקשת החירום סופקה במלואה! {units_needed} יחידות O- נלקחו בהצלחה.\n"
-                f"פירוט:\n" + "\n".join(donation_messages)
-            )
-            messages.success(request, success_msg)
-        else:
-            partial_msg = (
-                f"⚠️ סופקו רק {units_needed - remaining_units} מתוך {units_needed} יחידות.\n"
-                f"חסרות {remaining_units} יחידות.\n"
-                f"פירוט התרומות:\n" + "\n".join(donation_messages)
-            )
-            messages.warning(request, partial_msg)
+        emergency_request.fulfilled = (remaining_units == 0)
+        if emergency_request.fulfilled:
+            emergency_request.fulfilled_date = timezone.now()
+        emergency_request.save()
+        
+        # Success message
+        success_msg = (
+            f"✅ בקשת החירום סופקה במלואה! {units_needed} יחידות O- נלקחו בהצלחה.\n\n"
+            f"📞 איש קשר: {contact_name} - {contact_phone}\n"
+            f"🏥 מיקום: {hospital}\n\n"
+            f"📋 פירוט התרומות:\n" + "\n".join(donation_messages)
+        )
+        messages.success(request, success_msg)
         
         return redirect('emergency_request')
     
-    # Get statistics for the template
-    
-    o_negative_count = Donor.objects.filter(blood_type='O-').count()
+    # GET request - show the form
+    # Calculate total O- units ever donated (for display)
     total_o_negative_ml = Donation.objects.filter(
         donor__blood_type='O-'
     ).aggregate(total=Sum('volume_ml'))['total'] or 0
     total_o_negative_units = total_o_negative_ml // 450
     
     # Get recent emergency requests
-    recent_requests = BloodRequest.objects.filter(
-        emergency=True
-    ).order_by('-date_requested')[:10]
+    recent_requests = EmergencyRequest.objects.all().order_by('-date_requested')[:10]
     
     context = {
-        'o_negative_count': o_negative_count,
+        'o_negative_count': len(all_o_negative),  # Total O- donors
         'total_o_negative_units': total_o_negative_units,
-        'available_units': o_negative_count,  # Each donor can give 1 unit
+        'available_units': available_units,  # Actually available donors
         'recent_requests': recent_requests
     }
     
     return render(request, 'donors/emergency_request.html', context)
+
+def emergency_stats(request):
+    """JSON endpoint for real-time stats (used in your JavaScript)"""
+    all_o_negative = Donor.objects.filter(blood_type='O-')
+    o_negative_count = 0
+    for donor in all_o_negative:
+        if donor.can_donate:  # Use your can_donate property
+            o_negative_count += 1
+    
+    return JsonResponse({
+        'available_donors': o_negative_count,
+        'estimated_available_units': min(o_negative_count, 20)
+    })
+
 
 def get_emergency_stats(request):
     """AJAX endpoint for real-time statistics"""
@@ -1480,4 +1528,705 @@ def check_email_capacity(request):
         'compatible_types': COMPATIBLE.get(blood_type, [])
     })
 
-   
+# =====================
+# DISTANCE CALCULATION FUNCTIONS (Add to your views.py)
+# =====================
+
+def calculate_simple_distance(user, donor):
+    """Calculate distance between user and donor based on their locations"""
+    try:
+        user_location = user.user_location.location
+        donor_location = donor.user_location.location
+        return user_location.distance_to(donor_location)
+    except (UserLocation.DoesNotExist, AttributeError):
+        # Fallback if locations not set
+        return (hash(donor.national_id) % 50) + 1
+
+
+def find_nearby_donors(user, max_distance_km=50, blood_type=None):
+    """Find nearby donors within specified distance"""
+    nearby_donors = []
+    
+    try:
+        user_location = user.user_location.location
+    except (UserLocation.DoesNotExist, AttributeError):
+        return nearby_donors
+    
+    donors_query = Donor.objects.filter(can_donate=True)
+    if blood_type:
+        donors_query = donors_query.filter(blood_type=blood_type)
+    
+    for donor in donors_query:
+        try:
+            donor_location = donor.user.user_location.location
+            distance = user_location.distance_to(donor_location)
+            
+            if distance <= max_distance_km:
+                nearby_donors.append({
+                    'donor': donor,
+                    'distance_km': distance,
+                    'location': donor_location.name_he
+                })
+        except (User.DoesNotExist, UserLocation.DoesNotExist, AttributeError):
+            continue
+    
+    return sorted(nearby_donors, key=lambda x: x['distance_km'])
+
+
+def get_emergency_donors(emergency_location, max_distance_km=100):
+    """Find O- donors near emergency location"""
+    emergency_donors = []
+    
+    o_negative_donors = Donor.objects.filter(blood_type='O-', can_donate=True)
+    
+    for donor in o_negative_donors:
+        try:
+            donor_location = donor.user.user_location.location
+            distance = emergency_location.distance_to(donor_location)
+            
+            if distance <= max_distance_km:
+                emergency_donors.append({
+                    'donor': donor,
+                    'distance_km': distance,
+                    'location': donor_location.name_he,
+                    'phone': donor.phone_number
+                })
+        except (User.DoesNotExist, UserLocation.DoesNotExist, AttributeError):
+            continue
+    
+    return sorted(emergency_donors, key=lambda x: x['distance_km'])
+
+
+# =====================
+# UPDATED EMERGENCY REQUEST VIEW WITH LOCATION
+# =====================
+
+def emergency_request(request):
+    # Calculate available donors FIRST with location-based filtering
+    try:
+        # Get user's location for distance calculation
+        user_location = request.user.user_location.location if hasattr(request.user, 'user_location') else None
+    except:
+        user_location = None
+    
+    # Get all O- donors who can donate
+    all_o_negative = Donor.objects.filter(blood_type='O-')
+    available_donors = []
+    
+    for donor in all_o_negative:
+        if donor.can_donate:
+            # If user has location, calculate distance
+            if user_location:
+                try:
+                    donor_location = donor.user.user_location.location
+                    distance = user_location.distance_to(donor_location)
+                    available_donors.append({
+                        'donor': donor,
+                        'distance': distance
+                    })
+                except:
+                    available_donors.append({'donor': donor, 'distance': 999})
+            else:
+                available_donors.append({'donor': donor, 'distance': 999})
+    
+    # Sort by distance if location data is available
+    if user_location:
+        available_donors.sort(key=lambda x: x['distance'])
+    
+    available_units = len(available_donors)
+    
+    if request.method == 'POST':
+        # Get form data
+        units_needed = int(request.POST.get('units_needed', 0))
+        contact_name = request.POST.get('contact_name', '')
+        contact_phone = request.POST.get('contact_phone', '')
+        contact_relationship = request.POST.get('contact_relationship', 'family')
+        patient_name = request.POST.get('patient_name', '')
+        hospital = request.POST.get('hospital', '')
+        emergency_level = request.POST.get('emergency_level', 'critical')
+        notes = request.POST.get('notes', '')
+        
+        # VALIDATION: Check if there are actually available units
+        if available_units == 0:
+            messages.error(request, '❌ אין תורמי O- זמינים כרגע. כל התורמים תרמו לאחרונה ולא יכולים לתרום שוב עד שיעברו 56 יום.')
+            return redirect('emergency_request')
+        
+        if units_needed <= 0:
+            messages.error(request, 'מספר היחידות חייב להיות גדול מ-0')
+            return redirect('emergency_request')
+        
+        if units_needed > available_units:
+            messages.error(request, f'❌ אין מספיק תורמים זמינים. רק {available_units} יחידות זמינות מתוך {units_needed} שביקשת.')
+            return redirect('emergency_request')
+        
+        if not contact_name or not contact_phone:
+            messages.error(request, 'שם איש קשר וטלפון הם שדות חובה')
+            return redirect('emergency_request')
+        
+        # Try to get hospital location for better matching
+        hospital_location = None
+        if hospital:
+            try:
+                # Try to find location by hospital name
+                hospital_location = Location.objects.filter(
+                    name_he__icontains=hospital
+                ).first()
+            except:
+                pass
+        
+        # Process the emergency request
+        remaining_units = units_needed
+        donation_messages = []
+        matched_donors = []
+        
+        # Create emergency request record
+        emergency_request = EmergencyRequest.objects.create(
+            units_needed=units_needed,
+            contact_name=contact_name,
+            contact_phone=contact_phone,
+            contact_relationship=contact_relationship,
+            patient_name=patient_name or "מטופל אנונימי",
+            hospital=hospital or "מיקום לא specified",
+            emergency_level=emergency_level,
+            notes=notes,
+            automatic_match=True
+        )
+        
+        # Process donations with available donors (sorted by distance)
+        for donor_data in available_donors:
+            if remaining_units <= 0:
+                break
+                
+            donor = donor_data['donor']
+            distance = donor_data.get('distance', 999)
+            
+            # Each donor can give 1 unit in emergency
+            can_give = min(remaining_units, 1)
+            
+            if can_give > 0:
+                # Create donation record
+                donation = Donation.objects.create(
+                    donor=donor,
+                    donation_date=timezone.now().date(),
+                    volume_ml=can_give * 450,
+                    notes=f"תרומת חירום אוטומטית - {can_give} יחידות - מרחק: {distance} ק\"מ",
+                    is_approved=True
+                )
+                
+                donation_messages.append(
+                    f"✅ נלקח דם מתורם {donor.get_full_name()} "
+                    f"(ת\"ז: {donor.national_id}) - {can_give} יחידות - {distance} ק\"מ"
+                )
+                
+                matched_donors.append(donor)
+                remaining_units -= can_give
+        
+        # Update the emergency request
+        if matched_donors:
+            emergency_request.matched_donors.set(matched_donors)
+        
+        emergency_request.fulfilled = (remaining_units == 0)
+        if emergency_request.fulfilled:
+            emergency_request.fulfilled_date = timezone.now()
+        emergency_request.save()
+        
+        # Success message with location info
+        location_info = ""
+        if user_location:
+            location_info = f"\n📍 מיקום הבקשה: {user_location.name_he}"
+        
+        success_msg = (
+            f"✅ בקשת החירום סופקה במלואה! {units_needed} יחידות O- נלקחו בהצלחה."
+            f"{location_info}\n\n"
+            f"📞 איש קשר: {contact_name} - {contact_phone}\n"
+            f"🏥 מיקום: {hospital}\n\n"
+            f"📋 פירוט התרומות:\n" + "\n".join(donation_messages)
+        )
+        messages.success(request, success_msg)
+        
+        return redirect('emergency_request')
+    
+    # GET request - show the form
+    # Calculate total O- units ever donated (for display)
+    total_o_negative_ml = Donation.objects.filter(
+        donor__blood_type='O-'
+    ).aggregate(total=Sum('volume_ml'))['total'] or 0
+    total_o_negative_units = total_o_negative_ml // 450
+    
+    # Get recent emergency requests
+    recent_requests = EmergencyRequest.objects.all().order_by('-date_requested')[:10]
+    
+    # Get user's current location for display
+    user_city = None
+    try:
+        user_city = request.user.user_location.location.name_he
+    except:
+        pass
+    
+    context = {
+        'o_negative_count': len(all_o_negative),  # Total O- donors
+        'total_o_negative_units': total_o_negative_units,
+        'available_units': available_units,  # Actually available donors
+        'recent_requests': recent_requests,
+        'user_city': user_city,  # Show user's current city
+    }
+    
+    return render(request, 'donors/emergency_request.html', context)
+
+
+# =====================
+# LOCATION-BASED DONOR FINDER VIEW
+# =====================
+
+@doctor_required
+def location_based_donor_finder(request):
+    """Find donors by location for specific blood types"""
+    
+    if request.method == 'POST':
+        blood_type = request.POST.get('blood_type')
+        max_distance = int(request.POST.get('max_distance', 50))
+        min_units = int(request.POST.get('min_units', 1))
+        
+        # Get user's location (doctor's location)
+        try:
+            user_location = request.user.user_location.location
+        except (UserLocation.DoesNotExist, AttributeError):
+            messages.error(request, "❌ לא הוגדר מיקום למשתמש. אנא הגדר מיקום בפרופיל.")
+            return redirect('location_based_donor_finder')
+        
+        # Find compatible donors
+        compatible_types = COMPATIBLE.get(blood_type, [])
+        nearby_donors = []
+        
+        for donor in Donor.objects.filter(blood_type__in=compatible_types, can_donate=True):
+            try:
+                donor_location = donor.user.user_location.location
+                distance = user_location.distance_to(donor_location)
+                
+                if distance <= max_distance:
+                    availability_score = calculate_availability_score(donor)
+                    
+                    nearby_donors.append({
+                        'donor': donor,
+                        'distance_km': distance,
+                        'location': donor_location.name_he,
+                        'availability_score': availability_score,
+                        'last_donation': donor.last_donation_date,
+                        'can_donate_now': donor.days_until_next_donation == 0,
+                        'phone': donor.phone_number,
+                        'email': donor.email
+                    })
+            except (User.DoesNotExist, UserLocation.DoesNotExist, AttributeError):
+                continue
+        
+        # Sort by distance and availability
+        nearby_donors.sort(key=lambda x: (x['distance_km'], -x['availability_score']))
+        
+        context = {
+            'nearby_donors': nearby_donors,
+            'blood_type': blood_type,
+            'max_distance': max_distance,
+            'min_units': min_units,
+            'user_location': user_location.name_he,
+            'total_found': len(nearby_donors),
+            'search_performed': True,
+        }
+        
+        return render(request, 'donors/location_donor_finder.html', context)
+    
+    # GET request - show search form
+    return render(request, 'donors/location_donor_finder.html', {
+        'blood_types': Donor.BLOOD_TYPES,
+        'search_performed': False
+    })
+
+
+# =====================
+# UTILITY FUNCTIONS
+# =====================
+
+def calculate_availability_score(donor):
+    """Calculate donor availability score (higher = more available)"""
+    score = 100
+    
+    # Penalty for recent donation
+    if donor.last_donation_date:
+        days_passed = (timezone.now().date() - donor.last_donation_date).days
+        if days_passed < 56:
+            score -= (56 - days_passed) * 2
+    
+    # Bonus for excellent health
+    if donor.health_status == 'excellent':
+        score += 20
+    elif donor.health_status == 'good':
+        score += 10
+    
+    # Penalty for smoking/alcohol
+    if donor.smoking_status != 'never':
+        score -= 10
+    if donor.alcohol_use != 'never':
+        score -= 5
+    
+    return max(score, 0)
+
+
+def assign_random_locations_to_users():
+    """Assign random locations to users without locations (for testing)"""
+    from django.contrib.auth.models import User
+    
+    all_locations = Location.objects.all()
+    users_without_location = User.objects.filter(user_location__isnull=True)
+    
+    for user in users_without_location:
+        random_location = random.choice(all_locations)
+        UserLocation.objects.create(user=user, location=random_location)
+    
+    return f"Assigned locations to {users_without_location.count()} users"
+
+
+# =====================
+# UPDATED EMERGENCY STATS WITH LOCATION
+# =====================
+
+def emergency_stats(request):
+    """JSON endpoint for real-time stats with location info"""
+    all_o_negative = Donor.objects.filter(blood_type='O-')
+    
+    # Count available donors
+    available_count = 0
+    for donor in all_o_negative:
+        if donor.can_donate:
+            available_count += 1
+    
+    # Get user location if available
+    user_city = None
+    try:
+        user_city = request.user.user_location.location.name_he
+    except:
+        pass
+    
+    return JsonResponse({
+        'available_donors': available_count,
+        'estimated_available_units': min(available_count, 20),
+        'user_city': user_city
+    })
+
+import json
+import requests
+from django.http import JsonResponse
+
+# =====================
+# LOCATION MANAGEMENT VIEWS
+# =====================
+
+@login_required
+def add_user_location(request):
+    """
+    Allow users to select their city/village from a list
+    """
+    if request.method == 'POST':
+        location_id = request.POST.get('location')
+        
+        try:
+            location = Location.objects.get(id=location_id)
+            
+            # Create or update user location
+            user_location, created = UserLocation.objects.get_or_create(
+                user=request.user,
+                defaults={'location': location}
+            )
+            
+            if not created:
+                user_location.location = location
+                user_location.save()
+            
+            messages.success(request, f"📍 המיקום שלך עודכן ל: {location.name_he}")
+            
+            # Redirect based on user role
+            if hasattr(request.user, 'profile'):
+                if request.user.profile.role == 'doctor':
+                    return redirect('home')
+                else:
+                    return redirect('patient_dashboard')
+            return redirect('home')
+            
+        except Location.DoesNotExist:
+            messages.error(request, "❌ המיקום שנבחר לא נמצא במערכת")
+    
+    # GET request - show location selection form
+    locations = Location.objects.all().order_by('name_he')
+    
+    # Get user's current location if exists
+    current_location = None
+    try:
+        current_location = request.user.user_location.location
+    except UserLocation.DoesNotExist:
+        pass
+    
+    context = {
+        'locations': locations,
+        'current_location': current_location,
+        'districts': Location.DISTRICTS,
+    }
+    
+    return render(request, 'donors/add_location.html', context)
+
+
+@login_required
+def search_locations(request):
+    """
+    AJAX endpoint for searching locations
+    """
+    query = request.GET.get('q', '')
+    district = request.GET.get('district', '')
+    
+    locations = Location.objects.all()
+    
+    if query:
+        locations = locations.filter(
+            Q(name_he__icontains=query) | Q(name_en__icontains=query)
+        )
+    
+    if district:
+        locations = locations.filter(district=district)
+    
+    locations = locations.order_by('name_he')[:20]  # Limit results
+    
+    results = []
+    for location in locations:
+        results.append({
+            'id': location.id,
+            'name_he': location.name_he,
+            'name_en': location.name_en,
+            'district': location.get_district_display(),
+            'city_type': location.get_city_type_display(),
+            'has_hospital': location.has_hospital,
+            'has_blood_bank': location.has_blood_bank,
+        })
+    
+    return JsonResponse({'results': results})
+
+
+@login_required
+def get_location_details(request, location_id):
+    """
+    Get detailed information about a specific location
+    """
+    try:
+        location = Location.objects.get(id=location_id)
+        
+        # Find nearby hospitals
+        nearby_hospitals = []
+        if not location.has_hospital:
+            hospitals = Location.objects.filter(has_hospital=True)
+            for hospital in hospitals:
+                distance = location.distance_to(hospital)
+                if distance <= 50:  # Within 50km
+                    nearby_hospitals.append({
+                        'name': hospital.name_he,
+                        'distance': distance,
+                        'has_blood_bank': hospital.has_blood_bank
+                    })
+            # Sort by distance
+            nearby_hospitals.sort(key=lambda x: x['distance'])
+        
+        data = {
+            'id': location.id,
+            'name_he': location.name_he,
+            'name_en': location.name_en,
+            'district': location.get_district_display(),
+            'city_type': location.get_city_type_display(),
+            'latitude': float(location.latitude),
+            'longitude': float(location.longitude),
+            'has_hospital': location.has_hospital,
+            'has_blood_bank': location.has_blood_bank,
+            'nearby_hospitals': nearby_hospitals[:3],  # Top 3 closest
+            'emergency_services': location.emergency_services,
+        }
+        
+        return JsonResponse(data)
+        
+    except Location.DoesNotExist:
+        return JsonResponse({'error': 'Location not found'}, status=404)
+
+
+@login_required
+def user_location_map(request):
+    """
+    Show user's location on a map with nearby services
+    """
+    try:
+        user_location = request.user.user_location.location
+        
+        # Get nearby hospitals and blood banks
+        nearby_services = []
+        services = Location.objects.filter(
+            Q(has_hospital=True) | Q(has_blood_bank=True)
+        ).exclude(id=user_location.id)
+        
+        for service in services:
+            distance = user_location.distance_to(service)
+            if distance <= 30:  # Within 30km
+                service_type = []
+                if service.has_hospital:
+                    service_type.append("בית חולים")
+                if service.has_blood_bank:
+                    service_type.append("בנק דם")
+                
+                nearby_services.append({
+                    'name': service.name_he,
+                    'types': service_type,
+                    'distance': distance,
+                    'latitude': float(service.latitude),
+                    'longitude': float(service.longitude),
+                })
+        
+        # Sort by distance
+        nearby_services.sort(key=lambda x: x['distance'])
+        
+        context = {
+            'user_location': user_location,
+            'user_lat': float(user_location.latitude),
+            'user_lon': float(user_location.longitude),
+            'nearby_services': nearby_services,
+        }
+        
+        return render(request, 'donors/location_map.html', context)
+        
+    except UserLocation.DoesNotExist:
+        messages.warning(request, "❌ לא הוגדר מיקום. אנא הגדר את המיקום שלך תחילה.")
+        return redirect('add_user_location')
+
+
+@login_required
+def update_user_location(request):
+    """
+    Quick update of user location (AJAX)
+    """
+    if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        location_id = request.POST.get('location_id')
+        
+        try:
+            location = Location.objects.get(id=location_id)
+            
+            # Update or create user location
+            user_location, created = UserLocation.objects.get_or_create(
+                user=request.user,
+                defaults={'location': location}
+            )
+            
+            if not created:
+                user_location.location = location
+                user_location.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'מיקום עודכן ל: {location.name_he}',
+                'location_name': location.name_he
+            })
+            
+        except Location.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'מיקום לא נמצא'
+            }, status=400)
+    
+    return JsonResponse({
+        'success': False,
+        'error': 'בקשה לא תקינה'
+    }, status=400)
+
+
+@login_required
+def get_user_location_info(request):
+    """
+    Get current user location information (AJAX)
+    """
+    try:
+        user_location = request.user.user_location.location
+        
+        # Get nearby available donors for emergency planning
+        nearby_o_negative = []
+        o_negative_donors = Donor.objects.filter(blood_type='O-', can_donate=True)
+        
+        for donor in o_negative_donors:
+            try:
+                donor_location = donor.user.user_location.location
+                distance = user_location.distance_to(donor_location)
+                
+                if distance <= 50:  # Within 50km
+                    nearby_o_negative.append({
+                        'distance': distance,
+                        'can_donate_now': donor.days_until_next_donation == 0
+                    })
+            except:
+                continue
+        
+        data = {
+            'location_name': user_location.name_he,
+            'district': user_location.get_district_display(),
+            'latitude': float(user_location.latitude),
+            'longitude': float(user_location.longitude),
+            'has_hospital': user_location.has_hospital,
+            'has_blood_bank': user_location.has_blood_bank,
+            'nearby_o_negative_count': len(nearby_o_negative),
+            'immediate_o_negative': len([d for d in nearby_o_negative if d['can_donate_now']]),
+        }
+        
+        return JsonResponse(data)
+        
+    except UserLocation.DoesNotExist:
+        return JsonResponse({'error': 'לא הוגדר מיקום'}, status=404)
+
+
+@login_required
+def location_based_emergency_prepare(request):
+    """
+    Show emergency preparedness based on user location
+    """
+    try:
+        user_location = request.user.user_location.location
+        
+        # Find closest hospitals with blood banks
+        hospitals_with_blood = Location.objects.filter(
+            has_hospital=True, 
+            has_blood_bank=True
+        ).exclude(id=user_location.id)
+        
+        closest_hospitals = []
+        for hospital in hospitals_with_blood:
+            distance = user_location.distance_to(hospital)
+            closest_hospitals.append({
+                'hospital': hospital,
+                'distance': distance
+            })
+        
+        # Sort and get top 3
+        closest_hospitals.sort(key=lambda x: x['distance'])
+        closest_hospitals = closest_hospitals[:3]
+        
+        # Get nearby O- donors count
+        nearby_o_negative = 0
+        o_negative_donors = Donor.objects.filter(blood_type='O-', can_donate=True)
+        for donor in o_negative_donors:
+            try:
+                donor_location = donor.user.user_location.location
+                distance = user_location.distance_to(donor_location)
+                if distance <= 30:
+                    nearby_o_negative += 1
+            except:
+                continue
+        
+        context = {
+            'user_location': user_location,
+            'closest_hospitals': closest_hospitals,
+            'nearby_o_negative': nearby_o_negative,
+            'emergency_ready': nearby_o_negative >= 5,  # Consider ready if 5+ donors nearby
+        }
+        
+        return render(request, 'donors/emergency_prepare.html', context)
+        
+    except UserLocation.DoesNotExist:
+        messages.warning(request, "❌ אנא הגדר את המיקום שלך כדי לצפות במידע חירום מותאם")
+        return redirect('add_user_location')
+    

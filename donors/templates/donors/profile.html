@@ -86,12 +86,37 @@
     box-shadow: 0 5px 15px rgba(42, 157, 143, 0.4);
 }
 
+.location-btn {
+    background: linear-gradient(135deg, #e9c46a 0%, #f4a261 100%);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    color: #2b2d42;
+    transition: all 0.3s ease;
+    font-weight: bold;
+}
+
+.location-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(233, 196, 106, 0.4);
+    color: #2b2d42;
+}
+
 .role-badge {
     background: #a8dadc;
     color: #1d3557;
     padding: 5px 15px;
     border-radius: 20px;
     font-weight: bold;
+}
+
+.location-badge {
+    background: linear-gradient(135deg, #e9c46a 0%, #f4a261 100%);
+    color: #2b2d42;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+    border: 2px solid #e76f51;
 }
 
 .stats-grid {
@@ -174,6 +199,71 @@
 .report-section h5 i {
     margin-left: 10px;
 }
+
+.location-section {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    padding: 1.5rem;
+    border-radius: 10px;
+    margin: 2rem 0;
+    border-left: 4px solid #e9c46a;
+    border: 2px solid #f4a261;
+}
+
+.location-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.location-details {
+    flex-grow: 1;
+}
+
+.location-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.no-location {
+    text-align: center;
+    padding: 2rem;
+    color: #6c757d;
+}
+
+.no-location i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: #adb5bd;
+}
+
+.location-features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    background: rgba(255,255,255,0.7);
+    border-radius: 8px;
+}
+
+.feature-icon {
+    width: 30px;
+    height: 30px;
+    background: #e9c46a;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 10px;
+    color: #2b2d42;
+    font-size: 0.8rem;
+}
 </style>
 
 <div class="profile-container">
@@ -195,6 +285,87 @@
 
         <!-- Body Section -->
         <div class="profile-body">
+            <!-- Location Section -->
+            <div class="location-section">
+                <h5><i class="fas fa-map-marker-alt"></i> מיקום נוכחי</h5>
+                
+                {% if user.user_location %}
+                <div class="location-info">
+                    <div class="location-details">
+                        <div class="location-badge mb-2">
+                            <i class="fas fa-map-pin me-2"></i>
+                            {{ user.user_location.location.name_he }}
+                        </div>
+                        <div class="text-muted">
+                            <small>
+                                <i class="fas fa-map me-1"></i>
+                                {{ user.user_location.location.get_district_display }} • 
+                                {{ user.user_location.location.get_city_type_display }}
+                            </small>
+                            {% if user.user_location.location.has_hospital %}
+                                <span class="badge bg-success ms-2">🏥 בית חולים</span>
+                            {% endif %}
+                            {% if user.user_location.location.has_blood_bank %}
+                                <span class="badge bg-danger ms-2">🩸 בנק דם</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="location-actions">
+                        <a href="{% url 'user_location_map' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-map me-1"></i>מפה
+                        </a>
+                        <a href="{% url 'add_user_location' %}" class="btn btn-outline-warning btn-sm">
+                            <i class="fas fa-edit me-1"></i>שנה
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Location Features -->
+                <div class="location-features">
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+                        <div>
+                            <small class="fw-bold">תגובה מהירה</small>
+                            <br>
+                            <small class="text-muted">בחירום יתואמו התורמים הקרובים ביותר</small>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="fas fa-hospital"></i>
+                        </div>
+                        <div>
+                            <small class="fw-bold">שירותים מקומיים</small>
+                            <br>
+                            <small class="text-muted">מידע על בתי חולים ובנקי דם באזור</small>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div>
+                            <small class="fw-bold">קהילה מקומית</small>
+                            <br>
+                            <small class="text-muted">חיבור לתורמים באותו האזור</small>
+                        </div>
+                    </div>
+                </div>
+
+                {% else %}
+                <div class="no-location">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <h6 class="text-muted">לא הוגדר מיקום</h6>
+                    <p class="text-muted mb-3">הגדר את המיקום שלך לשיפור השירות בחירום</p>
+                    <a href="{% url 'add_user_location' %}" class="btn location-btn">
+                        <i class="fas fa-plus me-2"></i>הוסף מיקום
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
             <!-- Personal Information -->
             <div class="info-group">
                 <h4><i class="fas fa-user-circle me-2"></i>מידע אישי</h4>
@@ -312,6 +483,17 @@
                     <a href="#" class="btn edit-btn">
                         <i class="fas fa-history me-2"></i>היסטוריה
                     </a>
+
+                    <!-- Location Action Button -->
+                    {% if not user.user_location %}
+                    <a href="{% url 'add_user_location' %}" class="btn location-btn">
+                        <i class="fas fa-map-marker-alt me-2"></i>הוסף מיקום
+                    </a>
+                    {% else %}
+                    <a href="{% url 'add_user_location' %}" class="btn location-btn">
+                        <i class="fas fa-edit me-2"></i>עדכן מיקום
+                    </a>
+                    {% endif %}
                 </div>
             </div>
 

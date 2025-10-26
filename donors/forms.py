@@ -301,7 +301,58 @@ class BloodRequestForm(forms.ModelForm):
             instance.save()
         return instance
 
+from django import forms
+from .models import EmergencyRequest
 
+class EmergencyRequestForm(forms.ModelForm):
+    class Meta:
+        model = EmergencyRequest
+        fields = [
+            'units_needed',
+            'contact_name', 
+            'contact_phone',
+            'contact_relationship',
+            'patient_name',
+            'hospital',
+            'emergency_level',
+            'notes'
+        ]
+        widgets = {
+            'units_needed': forms.NumberInput(attrs={
+                'class': 'form-control form-control-lg',
+                'min': '1',
+                'max': '20',
+                'required': True
+            }),
+            'contact_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'הזן שם מלא'
+            }),
+            'contact_phone': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'הזן מספר טלפון'
+            }),
+            'hospital': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'הזן בית חולים או מיקום'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'פרטים נוספים על המצב (רשות)'
+            }),
+        }
+        labels = {
+            'units_needed': 'מספר יחידות דם נדרש',
+            'contact_name': 'שם איש קשר',
+            'contact_phone': 'טלפון להתקשרות',
+            'contact_relationship': 'קשר למטופל',
+            'patient_name': 'שם המטופל (אם רלוונטי)',
+            'hospital': 'מיקום',
+            'emergency_level': 'רמת חירום',
+            'notes': 'הערות נוספות',
+        }
+        
 class DoctorRegistrationForm(UserCreationForm):
     """
     Form for doctors to register new accounts.

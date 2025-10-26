@@ -32,6 +32,15 @@ urlpatterns = [
     path('matching/smart/', views.smart_donor_matching, name='smart_matching'),
     path('matching/smart/<int:request_id>/', views.smart_donor_matching, name='smart_matching_request'),
     path('check-availability/', views.check_donor_availability, name='check_availability'),
-
+    # Location management URLs
+    path('location/add/', views.add_user_location, name='add_user_location'),
+    path('location/map/', views.user_location_map, name='user_location_map'),
+    path('location/update/', views.update_user_location, name='update_user_location'),
+    path('location/info/', views.get_user_location_info, name='get_user_location_info'),
+    path('location/emergency-prepare/', views.location_based_emergency_prepare, name='location_based_emergency_prepare'),
+    
+    # AJAX endpoints
+    path('locations/search/', views.search_locations, name='search_locations'),
+    path('locations/<int:location_id>/details/', views.get_location_details, name='get_location_details'),
 
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

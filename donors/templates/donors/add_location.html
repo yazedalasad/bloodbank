@@ -1,0 +1,368 @@
+{% extends 'donors/base.html' %}
+{% block content %}
+
+<style>
+.location-card {
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.location-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px 15px 0 0;
+}
+
+.search-box {
+    position: relative;
+}
+
+.search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+.location-item {
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.location-item:hover {
+    background-color: #f8f9fa;
+}
+
+.location-item:last-child {
+    border-bottom: none;
+}
+
+.district-badge {
+    font-size: 0.8rem;
+    padding: 4px 8px;
+}
+
+.service-badge {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+}
+
+.map-preview {
+    height: 200px;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+}
+
+.current-location {
+    background-color: #e8f5e8;
+    border-left: 4px solid #28a745;
+}
+</style>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Header Card -->
+            <div class="card location-card">
+                <div class="card-header location-header text-center py-4">
+                    <h2 class="mb-0">
+                        <i class="fas fa-map-marker-alt me-2"></i>
+                        הגדרת מיקום
+                    </h2>
+                    <p class="mb-0 mt-2">בחר את היישוב שבו אתה גר</p>
+                </div>
+            </div>
+
+            <!-- Current Location -->
+            {% if current_location %}
+            <div class="card location-card current-location">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        מיקום נוכחי
+                    </h5>
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h4 class="text-success">{{ current_location.name_he }}</h4>
+                            <p class="mb-1">
+                                <span class="badge district-badge bg-primary">{{ current_location.get_district_display }}</span>
+                                <span class="badge district-badge bg-secondary">{{ current_location.get_city_type_display }}</span>
+                            </p>
+                            {% if current_location.has_hospital %}
+                                <span class="badge service-badge bg-success">🏥 בית חולים</span>
+                            {% endif %}
+                            {% if current_location.has_blood_bank %}
+                                <span class="badge service-badge bg-danger">🩸 בנק דם</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <a href="{% url 'user_location_map' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-map me-1"></i> צפה במפה
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Search Card -->
+            <div class="card location-card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-search me-2"></i>
+                        חיפוש יישוב
+                    </h5>
+                    
+                    <!-- Search Form -->
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <div class="search-box">
+                                <input type="text" 
+                                       class="form-control form-control-lg" 
+                                       id="locationSearch" 
+                                       placeholder="הקלד שם יישוב...">
+                                <div class="search-results" id="searchResults"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select form-select-lg" id="districtFilter">
+                                <option value="">כל המחוזות</option>
+                                {% for district_code, district_name in districts %}
+                                    <option value="{{ district_code }}">{{ district_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Selected Location Display -->
+                    <div class="mt-4" id="selectedLocation" style="display: none;">
+                        <div class="alert alert-info">
+                            <h6>יישוב נבחר:</h6>
+                            <div id="locationDetails" class="mt-2"></div>
+                            <form method="post" id="locationForm" class="mt-3">
+                                {% csrf_token %}
+                                <input type="hidden" name="location" id="selectedLocationId">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-save me-1"></i> שמור מיקום
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Quick Selection -->
+                    <div class="mt-4">
+                        <h6 class="text-muted mb-3">יישובים נפוצים:</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for location in locations|slice:":10" %}
+                                <button type="button" 
+                                        class="btn btn-outline-primary btn-sm quick-location"
+                                        data-location-id="{{ location.id }}">
+                                    {{ location.name_he }}
+                                </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Map Preview Card -->
+            <div class="card location-card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-map me-2"></i>
+                        מידע גיאוגרפי
+                    </h5>
+                    <div class="map-preview">
+                        <div class="text-center">
+                            <i class="fas fa-globe-asia fa-3x mb-3"></i>
+                            <p>מערכת מיקום מבוססת קואורדינטות</p>
+                            <small>מרחקים מחושבים אוטומטית בין יישובים</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Emergency Info Card -->
+            <div class="card location-card">
+                <div class="card-body">
+                    <h5 class="card-title text-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        מידע חירום
+                    </h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>יתרונות הגדרת מיקום:</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success me-2"></i> התאמה אוטומטית לתורמים קרובים</li>
+                                <li><i class="fas fa-check text-success me-2"></i> מידע על בתי חולים בקרבתך</li>
+                                <li><i class="fas fa-check text-success me-2"></i> התראות חירום מותאמות לאזור</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>בחירום:</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-ambulance text-danger me-2"></i> המערכת תאתר את התורמים הקרובים ביותר</li>
+                                <li><i class="fas fa-hospital text-danger me-2"></i> יוצגו בתי החולים הקרובים עם בנקי דם</li>
+                                <li><i class="fas fa-bolt text-danger me-2"></i> זמן תגובה מהיר יותר</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Search functionality
+const searchInput = document.getElementById('locationSearch');
+const districtFilter = document.getElementById('districtFilter');
+const searchResults = document.getElementById('searchResults');
+const selectedLocationDiv = document.getElementById('selectedLocation');
+const locationDetails = document.getElementById('locationDetails');
+const selectedLocationId = document.getElementById('selectedLocationId');
+
+let searchTimeout;
+
+function performSearch() {
+    const query = searchInput.value.trim();
+    const district = districtFilter.value;
+    
+    if (query.length < 2) {
+        searchResults.style.display = 'none';
+        return;
+    }
+    
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        fetch(`/locations/search/?q=${encodeURIComponent(query)}&district=${district}`)
+            .then(response => response.json())
+            .then(data => {
+                displayResults(data.results);
+            })
+            .catch(error => {
+                console.error('Search error:', error);
+            });
+    }, 300);
+}
+
+function displayResults(results) {
+    if (results.length === 0) {
+        searchResults.innerHTML = '<div class="location-item text-muted">לא נמצאו תוצאות</div>';
+    } else {
+        searchResults.innerHTML = results.map(location => `
+            <div class="location-item" onclick="selectLocation(${location.id}, '${location.name_he}')">
+                <div class="fw-bold">${location.name_he}</div>
+                <small class="text-muted">
+                    ${location.district} • ${location.city_type}
+                    ${location.has_hospital ? '🏥' : ''} 
+                    ${location.has_blood_bank ? '🩸' : ''}
+                </small>
+            </div>
+        `).join('');
+    }
+    searchResults.style.display = 'block';
+}
+
+function selectLocation(locationId, locationName) {
+    // Update selected location display
+    selectedLocationId.value = locationId;
+    
+    // Show loading in details
+    locationDetails.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border spinner-border-sm" role="status">
+                <span class="visually-hidden">טוען...</span>
+            </div>
+            טוען פרטי מיקום...
+        </div>
+    `;
+    
+    // Fetch location details
+    fetch(`/locations/${locationId}/details/`)
+        .then(response => response.json())
+        .then(data => {
+            let services = '';
+            if (data.has_hospital) services += '<span class="badge bg-success me-1">🏥 בית חולים</span>';
+            if (data.has_blood_bank) services += '<span class="badge bg-danger me-1">🩸 בנק דם</span>';
+            
+            let nearbyHospitals = '';
+            if (data.nearby_hospitals && data.nearby_hospitals.length > 0) {
+                nearbyHospitals = `
+                    <div class="mt-2">
+                        <small class="text-muted">בתי חולים קרובים:</small><br>
+                        ${data.nearby_hospitals.map(h => 
+                            `<span class="badge bg-light text-dark me-1">${h.name} (${h.distance} ק"מ)</span>`
+                        ).join('')}
+                    </div>
+                `;
+            }
+            
+            locationDetails.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 class="mb-1">${data.name_he}</h5>
+                        <p class="mb-1">
+                            <span class="badge bg-primary">${data.district}</span>
+                            <span class="badge bg-secondary">${data.city_type}</span>
+                        </p>
+                        ${services}
+                    </div>
+                </div>
+                ${nearbyHospitals}
+            `;
+        })
+        .catch(error => {
+            locationDetails.innerHTML = `
+                <div class="text-danger">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    שגיאה בטעינת פרטי המיקום
+                </div>
+            `;
+        });
+    
+    selectedLocationDiv.style.display = 'block';
+    searchResults.style.display = 'none';
+    searchInput.value = locationName;
+}
+
+// Event listeners
+searchInput.addEventListener('input', performSearch);
+districtFilter.addEventListener('change', performSearch);
+
+// Close search results when clicking outside
+document.addEventListener('click', function(event) {
+    if (!searchInput.contains(event.target) && !searchResults.contains(event.target)) {
+        searchResults.style.display = 'none';
+    }
+});
+
+// Quick location buttons
+document.querySelectorAll('.quick-location').forEach(button => {
+    button.addEventListener('click', function() {
+        const locationId = this.getAttribute('data-location-id');
+        const locationName = this.textContent;
+        selectLocation(locationId, locationName);
+    });
+});
+
+// Initialize if there's a current location
+
+</script>
+
+{% endblock %}

@@ -1,0 +1,150 @@
+{% extends 'donors/base.html' %}
+{% block content %}
+
+<style>
+.map-container {
+    height: 500px;
+    background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+    border-radius: 15px;
+    position: relative;
+    overflow: hidden;
+}
+
+.service-marker {
+    background: white;
+    border-radius: 20px;
+    padding: 8px 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    border-left: 4px solid #e74c3c;
+    margin-bottom: 10px;
+}
+
+.user-marker {
+    background: #2ecc71;
+    color: white;
+    border-radius: 20px;
+    padding: 10px 15px;
+    box-shadow: 0 2px 15px rgba(46, 204, 113, 0.4);
+}
+</style>
+
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Map Header -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-map-marked-alt me-2"></i>
+                        מפת המיקום שלך
+                    </h4>
+                </div>
+            </div>
+
+            <!-- Map Display -->
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="map-container d-flex align-items-center justify-content-center">
+                        <div class="text-center text-white">
+                            <i class="fas fa-map fa-4x mb-3"></i>
+                            <h4>מערכת מיפוי</h4>
+                            <p>מיקומך: {{ user_location.name_he }}</p>
+                            <small>קואורדינטות: {{ user_lat|floatformat:4 }}, {{ user_lon|floatformat:4 }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- User Location Info -->
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-circle me-2"></i>
+                        המיקום שלך
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="user-marker">
+                        <h6 class="mb-1">{{ user_location.name_he }}</h6>
+                        <small>
+                            {{ user_location.get_district_display }} • 
+                            {{ user_location.get_city_type_display }}
+                        </small>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <p><strong>קואורדינטות:</strong></p>
+                        <small class="text-muted">
+                            רוחב: {{ user_lat|floatformat:4 }}<br>
+                            אורך: {{ user_lon|floatformat:4 }}
+                        </small>
+                    </div>
+
+                    <div class="mt-3">
+                        <p><strong>שירותי חירום ביישוב:</strong></p>
+                        <ul class="list-unstyled">
+                            {% if user_location.has_hospital %}
+                                <li><i class="fas fa-hospital text-success me-2"></i> בית חולים</li>
+                            {% endif %}
+                            {% if user_location.has_blood_bank %}
+                                <li><i class="fas fa-tint text-danger me-2"></i> בנק דם</li>
+                            {% endif %}
+                            {% if not user_location.has_hospital and not user_location.has_blood_bank %}
+                                <li class="text-muted">אין שירותי חירום ביישוב</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nearby Services -->
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">
+                        <i class="fas fa-ambulance me-2"></i>
+                        שירותים קרובים
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if nearby_services %}
+                        {% for service in nearby_services %}
+                            <div class="service-marker">
+                                <h6 class="mb-1">{{ service.name }}</h6>
+                                <div class="mb-1">
+                                    {% for type in service.types %}
+                                        <span class="badge bg-primary me-1">{{ type }}</span>
+                                    {% endfor %}
+                                </div>
+                                <small class="text-muted">
+                                    <i class="fas fa-route me-1"></i>
+                                    {{ service.distance }} ק"מ ממך
+                                </small>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted text-center">
+                            <i class="fas fa-info-circle me-1"></i>
+                            לא נמצאו שירותי חירום ברדיוס של 30 ק"מ
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="card mt-4">
+                <div class="card-body text-center">
+                    <a href="{% url 'add_user_location' %}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-edit me-1"></i> שנה מיקום
+                    </a>
+                    <a href="{% url 'location_based_emergency_prepare' %}" class="btn btn-outline-danger">
+                        <i class="fas fa-shield-alt me-1"></i> מוכנות חירום
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
